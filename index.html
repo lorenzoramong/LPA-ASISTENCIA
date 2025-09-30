@@ -12,6 +12,19 @@
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6;
         }
+        /* Estilos personalizados para el botón de estado */
+        .status-present {
+            background-color: #d1fae5; /* green-100 */
+            color: #065f46; /* green-800 */
+        }
+        .status-absent {
+            background-color: #fee2e2; /* red-100 */
+            color: #991b1b; /* red-800 */
+        }
+        .status-pending {
+            background-color: #e5e7eb; /* gray-200 */
+            color: #4b5563; /* gray-600 */
+        }
     </style>
     <!-- Importar SheetJS (xlsx.js) para exportar a Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
@@ -38,7 +51,6 @@
     </header>
 
     <!-- Contenido Principal (Contenedor de Pestañas) -->
-    <!-- El contenido principal se muestra inmediatamente para evitar el bloqueo -->
     <main id="main-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         <!-- Nuevo Banner de Estado de Conexión (Se actualiza por JS) -->
@@ -56,12 +68,13 @@
                         Selecciona la **"fecha"** y **"horario"** para tomar la asistencia. Haz click en el botón del estado para cambiarlo entre **"PRESENTE"** y **"AUSENTE"**.
                         Usa la pestaña "Gestión de Academia" para añadir/eliminar jugadores o gestionar horarios.
                     </p>
+                    <div id="attendance-message-box" class="mt-4 p-3 rounded-lg text-xs text-center hidden"></div>
                 </div>
                 <!-- Columna de Asistencia Diaria (Simulación de contenido) -->
                 <div class="md:col-span-2 bg-white p-6 rounded-xl shadow-lg">
                     <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-600 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
+                            <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 1 1 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
                         </svg>
                         Asistencia Diaria
                     </h2>
@@ -190,18 +203,29 @@
     <script type="module">
         // Importaciones de Firebase 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, onSnapshot, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, onSnapshot, addDoc, deleteDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // **VARIABLES GLOBALES ESENCIALES DEL ENTORNO**
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // ==============================================================================
+        // *** PASO 1: CONFIGURACIÓN DE FIREBASE (¡Ya configurado para Academia-LPA!) ***
+        // ==============================================================================
+        const FIREBASE_CONFIG_MANUAL = {
+            apiKey: "AIzaSyCR423gNHR_Wb5kE65bSum_R542IJ3cN6I",
+            authDomain: "academia-lpa.firebaseapp.com",
+            projectId: "academia-lpa",
+            storageBucket: "academia-lpa.firebasestorage.app",
+            messagingSenderId: "311766682135",
+            appId: "1:311766682135:web:c76ca5330cf30132076a52",
+            measurementId: "G-194YH0TR6E"
+        };
+        // Usaremos el projectId como el ID de la aplicación base.
+        const APP_ID_STATIC = FIREBASE_CONFIG_MANUAL.projectId || 'padel-lpa-default';
 
         let app, db, auth;
-        let userId = null;
+        let userId = null; // Usaremos la UID generada por signInAnonymously
         let allPlayers = []; 
         let allSchedules = []; 
+        let currentAttendanceData = {}; 
         let isFirebaseInitialized = false;
 
         // Elementos de la UI
@@ -215,6 +239,11 @@
         const playerScheduleSelect = document.getElementById('player-schedule'); 
         const scheduleWarning = document.getElementById('schedule-warning');
         
+        // Elementos de Asistencia
+        const dateInput = document.getElementById('fecha');
+        const scheduleSelect = document.getElementById('horario');
+        const attendanceMessageBox = document.getElementById('attendance-message-box');
+        
         // Formularios de Gestión de Academia
         const addPlayerForm = document.getElementById('add-player-form');
         const addScheduleForm = document.getElementById('add-schedule-form');
@@ -226,8 +255,6 @@
 
         /**
          * Muestra un mensaje en el banner de estado de la conexión.
-         * @param {string} message Mensaje a mostrar.
-         * @param {('success'|'error'|'pending')} type Tipo de mensaje.
          */
         function updateStatusBanner(message, type) {
             connectionStatusBanner.textContent = message;
@@ -246,46 +273,49 @@
          * Lógica de inicialización de Firebase
          */
         async function initFirebase() {
-            if (!firebaseConfig) {
-                console.error("ERROR: firebaseConfig no está definido. No se puede inicializar Firebase.");
-                updateStatusBanner("ERROR: No se pudo cargar la configuración de Firebase.", 'error');
+            if (!FIREBASE_CONFIG_MANUAL.apiKey) {
+                const errMsg = "ERROR: Credenciales de Firebase no configuradas.";
+                console.error(errMsg);
+                updateStatusBanner(errMsg, 'error');
                 return;
             }
 
             try {
                 updateStatusBanner("Intentando conectar con la base de datos...", 'pending');
                 
-                // 1. Inicializar Firebase
-                app = initializeApp(firebaseConfig);
+                // 1. Inicializar Firebase con la configuración manual
+                app = initializeApp(FIREBASE_CONFIG_MANUAL);
                 db = getFirestore(app);
                 auth = getAuth(app);
                 isFirebaseInitialized = true;
                 
-                // 2. Autenticar (Con token o anónimamente)
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-
-                // 3. Establecer el observador de estado de autenticación
-                onAuthStateChanged(auth, (user) => {
+                // 2. Autenticar anónimamente (Necesario para usar Firestore)
+                // Usamos onAuthStateChanged para obtener el usuario una vez que el estado de auth esté listo.
+                onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         userId = user.uid;
-                        updateStatusBanner(`Conexión exitosa. Usuario: ${userId.substring(0, 8)}...`, 'success');
+                        // Mostrar un mensaje claro de que la conexión fue exitosa
+                        updateStatusBanner(`Conexión exitosa a Firebase. Usuario: ${userId.substring(0, 8)}...`, 'success');
                         
                         // Cargar datos principales SOLO DESPUÉS de obtener el userId
                         loadSchedules(); 
                         loadPadelPlayers(); 
                     } else {
-                        userId = null;
-                        updateStatusBanner("Conexión anónima establecida (acceso limitado o temporal).", 'pending');
-                        // Asegurar que las listas se vacíen si no hay un usuario válido
-                        renderPlayersAttendance([]);
-                        renderPlayerReportSelect([]);
-                        renderRegisteredPlayersList([]);
+                        // Si no hay usuario, intentamos firmar anónimamente.
+                        try {
+                            const userCredential = await signInAnonymously(auth);
+                            userId = userCredential.user.uid;
+                            updateStatusBanner(`Conexión exitosa a Firebase (Sesión Anónima). Usuario: ${userId.substring(0, 8)}...`, 'success');
+                            loadSchedules(); 
+                            loadPadelPlayers(); 
+                        } catch (anonError) {
+                            userId = null;
+                            updateStatusBanner(`ERROR: No se pudo conectar a Firebase ni iniciar sesión anónimamente. ${anonError.message}`, 'error');
+                            renderPlayersAttendance([]);
+                        }
                     }
                 });
+
 
                 setupTabs();
                 setupEventListeners();
@@ -303,6 +333,37 @@
             // Event Listener para el botón de exportar 
             exportExcelBtn.addEventListener('click', exportToExcel);
 
+            // Event Listeners para la toma de asistencia (Fecha y Horario)
+            dateInput.addEventListener('change', loadAttendance);
+            scheduleSelect.addEventListener('change', loadAttendance);
+            
+            // Event Listener para cambio de estado de asistencia (Delegación de eventos)
+            playerListBody.addEventListener('click', (e) => {
+                const btn = e.target.closest('.status-btn');
+                if (btn) {
+                    const playerId = btn.closest('tr').dataset.playerId;
+                    const currentStatus = btn.dataset.status;
+                    
+                    if (dateInput.value === "" || scheduleSelect.value === "") {
+                        displayMessage(attendanceMessageBox, "ERROR: Debes seleccionar primero la Fecha y el Horario.", 'red');
+                        return;
+                    }
+
+                    // Determinar el nuevo estado (PRESENTE -> AUSENTE, AUSENTE -> PRESENTE, PENDIENTE -> PRESENTE)
+                    let newStatus;
+                    if (currentStatus === 'PRESENTE') {
+                        newStatus = 'AUSENTE';
+                    } else {
+                        newStatus = 'PRESENTE'; // Cambia de AUSENTE o PENDIENTE a PRESENTE
+                    }
+
+                    // Guardar y actualizar UI
+                    saveAttendance(playerId, newStatus);
+                    updateAttendanceUI(btn, newStatus); // Optimización visual inmediata
+                }
+            });
+
+
             // Event Listener para añadir jugador
             addPlayerForm.addEventListener('submit', handleAddPlayer);
 
@@ -313,8 +374,8 @@
             registeredPlayersList.addEventListener('click', (e) => {
                 if (e.target.classList.contains('delete-player-btn')) {
                     const playerId = e.target.closest('.player-item').dataset.id;
-                    // Usamos window.confirm como alternativa simple a un modal custom
                     if (playerId) {
+                         // Usamos window.confirm como alternativa simple a un modal custom
                          if (window.confirm("¿Estás seguro de que deseas eliminar a este jugador? Esta acción es irreversible.")) {
                             handleDeletePlayer(playerId);
                         }
@@ -358,8 +419,7 @@
          */
         function exportToExcel() {
             if (allPlayers.length === 0) {
-                console.warn("No hay jugadores registrados para exportar.");
-                // Mostrar mensaje de error temporalmente en el banner de estado si es necesario
+                displayMessage(attendanceMessageBox, "No hay jugadores registrados para exportar.", 'red');
                 return;
             }
 
@@ -382,28 +442,29 @@
 
                 const date = new Date().toISOString().slice(0, 10);
                 XLSX.writeFile(workbook, `Reporte_General_LPA_${date}.xlsx`);
-                console.log("Reporte general exportado a Excel.");
+                displayMessage(attendanceMessageBox, "Reporte exportado con éxito.", 'green');
 
             } catch (error) {
                 console.error("Error al exportar a Excel:", error);
+                displayMessage(attendanceMessageBox, `Error al exportar: ${error.message}`, 'red');
             }
         }
 
 
-        // --- LÓGICA DE FIREBASE: CARGA DE DATOS (Requiere userId) ---
+        // --- LÓGICA DE FIREBASE: CARGA DE DATOS PRINCIPALES ---
 
         /**
          * Carga los datos de los jugadores desde Firestore.
+         * La función onSnapshot se mantiene activa y recarga la lista.
          */
         function loadPadelPlayers() {
             if (!db || !userId) {
                 renderPlayersAttendance([]);
-                renderPlayerReportSelect([]);
-                renderRegisteredPlayersList([]);
                 return;
             }
-
-            const playersColRef = collection(db, `artifacts/${appId}/users/${userId}/players`);
+            
+            // La ruta de la colección respeta las reglas de seguridad: /artifacts/{appId}/users/{userId}/players
+            const playersColRef = collection(db, `artifacts/${APP_ID_STATIC}/users/${userId}/players`);
 
             onSnapshot(playersColRef, (snapshot) => {
                 allPlayers = []; 
@@ -411,10 +472,15 @@
                     allPlayers.push({ id: doc.id, ...doc.data() });
                 });
                 
-                // Renderizar en todas las vistas necesarias
+                // Una vez cargados, renderizar y cargar asistencia si hay fecha/horario
                 renderPlayersAttendance(allPlayers);
                 renderPlayerReportSelect(allPlayers);
                 renderRegisteredPlayersList(allPlayers);
+                
+                // Recargar asistencia si ya hay filtros puestos
+                if (dateInput.value && scheduleSelect.value) {
+                    loadAttendance(); 
+                }
 
                 console.log("Datos de jugadores cargados y actualizados:", allPlayers.length);
             }, (error) => {
@@ -429,13 +495,11 @@
         function loadSchedules() {
             if (!db || !userId) return;
 
-            const schedulesColRef = collection(db, `artifacts/${appId}/users/${userId}/schedules`);
-            const horarioSelect = document.getElementById('horario'); 
+            const schedulesColRef = collection(db, `artifacts/${APP_ID_STATIC}/users/${userId}/schedules`);
             
-            // Limpiar select de horarios
-            horarioSelect.innerHTML = `<option value="">Seleccionar Horario</option>`;
+            // Limpiar selects y cache de horarios
+            scheduleSelect.innerHTML = `<option value="">Seleccionar Horario</option>`;
             playerScheduleSelect.innerHTML = `<option value="">-- Seleccionar Horario --</option>`;
-
 
             onSnapshot(schedulesColRef, (snapshot) => {
                 allSchedules = [];
@@ -449,7 +513,7 @@
                     const option1 = document.createElement('option');
                     option1.value = schedule.id; 
                     option1.textContent = schedule.time;
-                    horarioSelect.appendChild(option1);
+                    scheduleSelect.appendChild(option1);
 
                     const option2 = document.createElement('option');
                     option2.value = schedule.id; 
@@ -463,14 +527,151 @@
                 } else {
                     scheduleWarning.classList.add('hidden');
                 }
-
-                // Actualizar la lista de jugadores renderizada para mostrar el horario
+                
                 renderRegisteredPlayersList(allPlayers); 
 
                 console.log("Horarios cargados:", allSchedules.length);
             }, (error) => {
                 console.error("Error al cargar horarios:", error);
             });
+        }
+
+        // --- LÓGICA DE FIREBASE: REGISTRO DE ASISTENCIA ---
+
+        /**
+         * Carga la asistencia registrada para la fecha y horario seleccionados.
+         */
+        function loadAttendance() {
+            const date = dateInput.value;
+            const scheduleId = scheduleSelect.value;
+            
+            if (!db || !userId || !date || !scheduleId) {
+                // Si falta la fecha o el horario, se asume que no hay datos para cargar.
+                currentAttendanceData = {};
+                renderPlayersAttendance(allPlayers); // Renderizar con estados PENDIENTE
+                return;
+            }
+
+            // Documento de asistencia único por (Fecha + Horario)
+            const attendanceDocId = `${date}_${scheduleId}`;
+            const attendanceDocRef = doc(db, `artifacts/${APP_ID_STATIC}/users/${userId}/attendance`, attendanceDocId);
+
+            // Usamos onSnapshot para mantener el estado en tiempo real
+            onSnapshot(attendanceDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    // Los datos de asistencia están anidados en el documento por playerId
+                    currentAttendanceData = docSnap.data().records || {};
+                    console.log("Asistencia cargada para el periodo:", currentAttendanceData);
+                } else {
+                    currentAttendanceData = {};
+                    console.log("No hay asistencia registrada para este periodo.");
+                }
+                // Volver a renderizar la lista de jugadores para aplicar la asistencia cargada
+                renderPlayersAttendance(allPlayers);
+                
+            }, (error) => {
+                console.error("Error al cargar asistencia:", error);
+                displayMessage(attendanceMessageBox, `Error al cargar asistencia: ${error.message}`, 'red');
+            });
+        }
+        
+        /**
+         * Guarda o actualiza el estado de asistencia de un jugador.
+         * @param {string} playerId ID del jugador.
+         * @param {('PRESENTE'|'AUSENTE')} status Nuevo estado.
+         */
+        async function saveAttendance(playerId, status) {
+            const date = dateInput.value;
+            const scheduleId = scheduleSelect.value;
+
+            if (!db || !userId || !date || !scheduleId) {
+                displayMessage(attendanceMessageBox, "ERROR: Debes seleccionar Fecha y Horario.", 'red');
+                return;
+            }
+            
+            const attendanceDocId = `${date}_${scheduleId}`;
+            const attendanceDocRef = doc(db, `artifacts/${APP_ID_STATIC}/users/${userId}/attendance`, attendanceDocId);
+            
+            try {
+                
+                // Si el documento attendanceDocId no existe, se crea con setDoc y merge: true
+                await setDoc(attendanceDocRef, { 
+                    date: date, 
+                    scheduleId: scheduleId, 
+                    // Usamos la notación de objeto para crear o actualizar el campo anidado 'records'
+                    records: { [playerId]: { status: status, timestamp: new Date() } }
+                }, { merge: true });
+
+                
+                // TODO: Aquí iría la lógica para actualizar 'totalClasses' del jugador (reporte individual).
+                // Esto requeriría una función de contador más compleja para garantizar que no se cuenten doble.
+                
+                displayMessage(attendanceMessageBox, `Asistencia de ${allPlayers.find(p => p.id === playerId)?.name} marcada como ${status}.`, 'green');
+
+            } catch (error) {
+                console.error("Error al guardar asistencia:", error);
+                displayMessage(attendanceMessageBox, `Error al guardar asistencia: ${error.message}`, 'red');
+            }
+        }
+
+        /**
+         * Renderiza la lista de jugadores en la tabla de Asistencia.
+         * @param {Array<Object>} players Lista de jugadores
+         */
+        function renderPlayersAttendance(players) {
+            // Filtrar jugadores por el horario actualmente seleccionado
+            const selectedScheduleId = scheduleSelect.value;
+            const playersInSchedule = selectedScheduleId 
+                ? players.filter(p => p.scheduleId === selectedScheduleId)
+                : players; // Mostrar todos si no hay horario seleccionado
+            
+            if (playersInSchedule.length === 0) {
+                 const message = selectedScheduleId 
+                    ? `No hay jugadores asignados al horario seleccionado. Añádelos en "Gestión de Academia".`
+                    : `No hay jugadores registrados. Añádelos en "Gestión de Academia".`;
+
+                playerListBody.innerHTML = `<tr><td colspan="3" class="px-3 py-4 text-center text-sm text-gray-500">${message}</td></tr>`;
+                return;
+            }
+
+            playerListBody.innerHTML = playersInSchedule.map(player => {
+                // Obtener el estado de la cache (si existe)
+                const record = currentAttendanceData[player.id];
+                const status = record ? record.status : 'PENDIENTE';
+                const statusClass = status === 'PRESENTE' ? 'status-present' : 
+                                    (status === 'AUSENTE' ? 'status-absent' : 'status-pending');
+
+                return `
+                    <tr class="hover:bg-gray-100 transition-colors duration-150" data-player-id="${player.id}">
+                        <td class="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${player.name || 'N/A'}</td>
+                        <td class="px-3 py-4 whitespace-nowrap text-sm">
+                            <button class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full transition duration-150 hover:opacity-80 status-btn ${statusClass}" data-status="${status}">
+                                ${status}
+                            </button>
+                        </td>
+                        <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">${player.totalClasses || 0}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        /**
+         * Actualiza visualmente el botón de estado.
+         * @param {HTMLElement} btn El botón de estado (status-btn)
+         * @param {('PRESENTE'|'AUSENTE'|'PENDIENTE')} status Nuevo estado
+         */
+        function updateAttendanceUI(btn, status) {
+            btn.textContent = status;
+            btn.dataset.status = status;
+            btn.classList.remove('status-present', 'status-absent', 'status-pending');
+            
+            if (status === 'PRESENTE') {
+                btn.classList.add('status-present');
+            } else if (status === 'AUSENTE') {
+                btn.classList.add('status-absent');
+            } else {
+                btn.classList.add('status-pending');
+            }
         }
 
 
@@ -494,7 +695,7 @@
             }
 
             try {
-                const playersColRef = collection(db, `artifacts/${appId}/users/${userId}/players`);
+                const playersColRef = collection(db, `artifacts/${APP_ID_STATIC}/users/${userId}/players`);
                 await addDoc(playersColRef, {
                     name: playerName,
                     scheduleId: scheduleId, 
@@ -529,7 +730,7 @@
             }
 
             try {
-                const schedulesColRef = collection(db, `artifacts/${appId}/users/${userId}/schedules`);
+                const schedulesColRef = collection(db, `artifacts/${APP_ID_STATIC}/users/${userId}/schedules`);
                 await addDoc(schedulesColRef, {
                     time: scheduleTime,
                     createdAt: new Date()
@@ -552,43 +753,19 @@
             if (!db || !userId || !playerId) return;
             
             try {
-                const playerDocRef = doc(db, `artifacts/${appId}/users/${userId}/players`, playerId);
+                const playerDocRef = doc(db, `artifacts/${APP_ID_STATIC}/users/${userId}/players`, playerId);
                 await deleteDoc(playerDocRef);
                 console.log("Jugador eliminado:", playerId);
+                displayMessage(playerMessage, "Jugador eliminado con éxito.", 'green');
             } catch (error) {
                 console.error("Error al eliminar jugador:", error);
+                displayMessage(playerMessage, `Error al eliminar: ${error.message}`, 'red');
             }
         }
         
 
-        // --- LÓGICA DE RENDERIZADO DE UI ---
+        // --- LÓGICA DE RENDERIZADO DE UI Y UTILIDADES ---
 
-        /**
-         * Renderiza la lista de jugadores en la tabla de Asistencia.
-         * @param {Array<Object>} players Lista de jugadores
-         */
-        function renderPlayersAttendance(players) {
-            if (players.length === 0) {
-                playerListBody.innerHTML = `<tr><td colspan="3" class="px-3 py-4 text-center text-sm text-gray-500">No hay jugadores registrados. Añádelos en "Gestión de Academia".</td></tr>`;
-                return;
-            }
-
-            playerListBody.innerHTML = players.map(player => `
-                <tr class="hover:bg-gray-100 transition-colors duration-150" data-player-id="${player.id}">
-                    <td class="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${player.name || 'N/A'}</td>
-                    <td class="px-3 py-4 whitespace-nowrap text-sm">
-                        <!-- Botón de estado: PRESENTE/AUSENTE (Simulación) -->
-                        <button class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800 transition duration-150 hover:opacity-80 status-btn" data-status="PENDIENTE">
-                            PENDIENTE
-                        </button>
-                    </td>
-                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">${player.totalClasses || 0}</td>
-                </tr>
-            `).join('');
-            
-            // TODO: Añadir lógica para cambiar el estado de asistencia con un clic en el botón
-        }
-        
         /**
          * Renderiza la lista de jugadores en el select de Reporte Individual.
          * @param {Array<Object>} players Lista de jugadores
@@ -614,9 +791,7 @@
                 return;
             }
 
-            // Mapear los jugadores, añadiendo el nombre del horario
             const playerHtml = players.map(player => {
-                // Buscar el nombre del horario (allSchedules ya está cargado por loadSchedules)
                 const schedule = allSchedules.find(s => s.id === player.scheduleId);
                 const scheduleTime = schedule ? schedule.time : 'Horario No Asignado';
 
@@ -638,17 +813,20 @@
         
         /**
          * Muestra un mensaje temporal en la interfaz (éxito/error) para formularios.
-         * @param {HTMLElement} element Elemento donde mostrar el mensaje.
-         * @param {string} message Mensaje a mostrar.
-         * @param {('green'|'red')} type Tipo de mensaje.
          */
         function displayMessage(element, message, type) {
             element.textContent = message;
-            element.classList.remove('hidden', 'text-green-600', 'text-red-600');
+            element.classList.remove('hidden', 'text-green-600', 'text-red-600', 'bg-red-100', 'bg-green-100');
             element.classList.add(`text-${type}-600`);
+            
+            // Añadir fondo para mejor visibilidad en el cuadro de asistencia
+            if (element === attendanceMessageBox) {
+                 element.classList.add(`bg-${type}-100`);
+            }
             
             setTimeout(() => {
                 element.classList.add('hidden');
+                element.classList.remove(`bg-${type}-100`);
             }, 5000);
         }
 
@@ -658,6 +836,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 
