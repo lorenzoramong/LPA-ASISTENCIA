@@ -3,52 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Padel Club App</title>
+    <title>LPA - Registro</title>
     <!-- Carga de Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     
     <!-- Meta etiquetas para PWA y compatibilidad iOS/Apple (Iconografía y Modo App) -->
-    <!-- 1. Ícono para la pantalla de inicio (DEBES SUBIR TU LOGO COMO "app-icon.png") -->
     <link rel="apple-touch-icon" href="/app-icon.png">
-    
-    <!-- 2. Forzar a que se ejecute en modo "App" y no como Safari (evita que se salga al navegador) -->
     <meta name="apple-mobile-web-app-capable" content="yes">
-    
-    <!-- 3. Definir el color de la barra de estado superior de iOS (mantiene el color azul) -->
     <meta name="apple-mobile-web-app-status-bar-style" content="#1D4ED8"> 
-    
-    <!-- Configuración del tema (barra de navegación en Android) -->
     <meta name="theme-color" content="#1D4ED8"> 
     
     <style>
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f7f7f7;
+            /* Usar 100% de la altura de la ventana visible para evitar problemas de visualización en iOS/Android */
+            min-height: 100vh; 
+            margin: 0;
+            padding: 0;
             display: flex;
             justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding-bottom: 70px; /* Espacio para la barra de navegación inferior */
         }
         .container {
             width: 100%;
-            max-width: 420px; /* Ancho máximo para simular un móvil */
+            max-width: 420px; 
             min-height: 100vh;
             background-color: white;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
             position: relative;
-            overflow: hidden; /* Asegura que no haya scroll horizontal */
+            /* Asegura que no haya scroll horizontal no deseado */
+            overflow-x: hidden; 
         }
         /* Estilos específicos de la aplicación */
+        .main-content {
+            /* Dejar espacio para el header (arriba) y el navbar (abajo) */
+            padding-bottom: 90px; 
+            padding-top: 56px; /* Altura del header */
+        }
         .tab-content {
             display: none;
             padding: 1rem;
-            min-height: calc(100vh - 120px); /* Ajuste para el header y el navbar */
+            /* La altura mínima ahora se gestiona con el padding del main-content */
         }
         .tab-content.active {
             display: block;
+        }
+        .header {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 420px;
+            z-index: 10;
         }
         .navbar {
             position: fixed;
@@ -77,7 +85,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(255, 255, 255, 0.9);
+            background-color: rgba(255, 255, 255, 0.95);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -97,12 +105,12 @@
     
     <div class="container rounded-xl">
         <!-- Encabezado Fijo -->
-        <header class="p-4 bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-            <h1 class="text-2xl font-bold text-gray-800 text-center">Padel Club - LPA</h1>
+        <header class="header p-4 bg-white border-b border-gray-200 shadow-sm">
+            <h1 class="text-2xl font-bold text-gray-800 text-center">LPA - Registro</h1>
         </header>
 
         <!-- Contenido de las Pestañas -->
-        <main class="pb-16">
+        <main class="main-content">
             
             <!-- Pestaña 1: Registro de Asistencia -->
             <div id="tab-registro" class="tab-content active">
@@ -174,14 +182,22 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, collection, addDoc, onSnapshot, query, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Establecer nivel de log para depuración de Firebase
         setLogLevel('debug');
 
         // --- Variables de Entorno (Proporcionadas por el Contenedor) ---
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        // Verificar si la configuración es un objeto válido antes de parsear
+        const rawFirebaseConfig = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
+        let firebaseConfig = {};
+        try {
+            firebaseConfig = JSON.parse(rawFirebaseConfig);
+        } catch (e) {
+            console.error("Error al parsear la configuración de Firebase:", e);
+        }
+        
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         
         // --- Referencias DOM ---
@@ -201,23 +217,30 @@
         let isAuthReady = false;
         let retryCount = 0;
         const MAX_RETRIES = 5;
+        // Flag para verificar si la configuración de Firebase es válida
+        const isConfigValid = Object.keys(firebaseConfig).length > 0 && firebaseConfig.projectId;
+
 
         // --- Inicialización de Firebase y Autenticación ---
         async function initializeFirebase() {
             loadingOverlay.classList.remove('hidden');
 
-            try {
-                if (Object.keys(firebaseConfig).length === 0) {
-                    throw new Error("Configuración de Firebase no encontrada.");
-                }
+            if (!isConfigValid) {
+                // Manejar el caso de "Configuración de Firebase no encontrada" (el error de la imagen)
+                const error = new Error("Configuración de Firebase no encontrada.");
+                console.error("Error fatal al inicializar Firebase:", error);
+                handleAuthError(error, true); // Pasar 'true' para indicar que no hay configuración
+                return; 
+            }
 
+            try {
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
-                auth = getAuth(app); // Se obtiene la instancia de Auth aquí
+                auth = getAuth(app); 
                 
                 authMessage.textContent = 'Autenticando...';
                 
-                // Mover el listener de estado de autenticación aquí, después de obtener 'auth'
+                // 1. Listener de estado de autenticación (Se activa después de cada intento de auth)
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         userId = user.uid;
@@ -229,20 +252,20 @@
                         isAuthReady = true;
                         loadingOverlay.classList.add('hidden');
                         
-                        // Una vez que el usuario está listo, inicia la escucha de datos
                         setupRealtimeListener();
                     } else {
-                        // Esto se llama después del primer intento si falla o si la sesión caduca
-                        if (isAuthReady === false) { // Solo si no se ha configurado antes
-                            handleAuthError(new Error("No se pudo establecer la conexión segura después de varios intentos."));
+                        // Si se llega aquí y el usuario no está listo (falló autenticación inicial)
+                        if (isAuthReady === false) { 
+                            handleAuthError(new Error("No se pudo iniciar sesión después de varios intentos."));
                         }
                     }
                 });
 
-                // Iniciar el intento de autenticación (que activará el listener de arriba)
+                // 2. Iniciar el intento de autenticación (llama al listener de arriba)
                 await attemptAuth(initialAuthToken, retryCount);
 
             } catch (error) {
+                // Error de inicialización (ej. API Key incorrecta)
                 console.error("Error fatal al inicializar Firebase:", error);
                 handleAuthError(error);
             }
@@ -253,65 +276,64 @@
             loadingText.textContent = `Autenticando... (Intento ${attempt + 1}/${MAX_RETRIES})`;
             
             try {
-                // Usar el token personalizado si está disponible, si no, iniciar sesión anónimamente
                 if (token) {
                     await signInWithCustomToken(auth, token);
                 } else {
                     await signInAnonymously(auth);
                 }
-                // Si tiene éxito, onAuthStateChanged se encargará de configurar el estado final.
-                
             } catch (error) {
                 console.error(`Error de autenticación en el intento ${attempt + 1}:`, error);
                 
                 if (attempt < MAX_RETRIES - 1) {
                     retryCount++;
-                    const delay = Math.pow(2, attempt) * 1000 + (Math.random() * 1000); // 1s, 2s, 4s, 8s, ... + jitter
+                    const delay = Math.pow(2, attempt) * 1000 + (Math.random() * 1000); 
                     loadingText.textContent = `Fallo. Reintentando en ${Math.floor(delay/1000)}s...`;
                     
-                    // Usar setTimeout con Promise para esperar
                     await new Promise(resolve => setTimeout(resolve, delay));
-                    await attemptAuth(token, retryCount); // Llamada recursiva
+                    await attemptAuth(token, retryCount); 
                 } else {
+                    // Si falla el último intento, se llama a handleAuthError
                     handleAuthError(error);
                 }
             }
         }
 
-        // Ya no necesitamos este listener aquí porque lo hemos movido dentro de initializeFirebase
 
-        function handleAuthError(error) {
+        function handleAuthError(error, isConfigMissing = false) {
+            // Generar ID temporal para que la interfaz siga mostrando algo
             userId = crypto.randomUUID(); 
-            userIdCode.textContent = `Error de autenticación. ID Temporal: ${userId}`;
-            authMessage.textContent = `ERROR: No se pudo iniciar sesión. ${error.message}`;
+            userIdCode.textContent = `ID Temporal: ${userId}`;
+            
+            if (isConfigMissing) {
+                authMessage.textContent = `ERROR: Configuración de Firebase no encontrada. El registro NO se guardará.`;
+            } else {
+                authMessage.textContent = `ERROR: No se pudo iniciar sesión. ${error.message}`;
+            }
+
             document.getElementById('auth-status').classList.replace('bg-blue-100', 'bg-red-100');
             document.getElementById('auth-status').classList.replace('text-blue-800', 'text-red-800');
+            
+            // Si la configuración no es válida o falló la conexión, deshabilitar el formulario y los listeners.
             submitBtn.disabled = true;
             isAuthReady = true; 
             loadingOverlay.classList.add('hidden');
             
-            // Si falla la autenticación, se asume que no podrá acceder a datos privados
-            historialLista.innerHTML = `<p class="text-center text-red-500 mt-4">Error de seguridad: No tienes permisos para ver el historial.</p>`;
+            historialLista.innerHTML = `<p class="text-center text-red-500 mt-4">Error de conexión. El historial no está disponible.</p>`;
             noRegistros.classList.add('hidden');
         }
 
 
         // --- Lógica del Listener en Tiempo Real (onSnapshot) ---
         function setupRealtimeListener() {
-            if (!db || !userId) {
-                console.warn("Firestore no está inicializado o el userId no está disponible.");
-                return;
-            }
+            if (!db || !userId) return;
 
             historialLoading.classList.remove('hidden');
             
             // Ruta de la colección privada: /artifacts/{appId}/users/{userId}/registros
             const registrosRef = collection(db, `artifacts/${appId}/users/${userId}/registros`);
 
-            // Consulta: obtener todos los registros y ordenarlos por timestamp descendente
             const q = query(registrosRef); 
             
-            // Iniciar la escucha en tiempo real
             onSnapshot(q, (snapshot) => {
                 historialLoading.classList.add('hidden');
                 const registros = [];
@@ -323,19 +345,19 @@
                     });
                 });
                 
-                // Ordenar los registros por timestamp (más reciente primero), ya que evitamos usar orderBy() en la query
+                // Ordenar los registros por timestamp (más reciente primero)
                 registros.sort((a, b) => {
                     if (a.timestamp && b.timestamp) {
+                        // Convertir a milisegundos para comparación
                         return b.timestamp.toMillis() - a.timestamp.toMillis();
                     }
-                    return 0; // Mantener orden si el timestamp no existe
+                    return 0;
                 });
 
                 renderHistorial(registros);
             }, (error) => {
                 console.error("Error al escuchar cambios en el historial:", error);
                 historialLoading.classList.add('hidden');
-                // Esto podría indicar que las reglas de seguridad están fallando.
                 historialLista.innerHTML = `<p class="text-center text-red-500 mt-4">Error al cargar datos. Verifica tus permisos: ${error.message}</p>`;
             });
         }
@@ -380,6 +402,11 @@
         // --- Manejo del Formulario de Registro ---
         registroForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            if (!isConfigValid) {
+                showMessage("ERROR: La aplicación no está configurada. El registro no se puede guardar.", 'bg-red-100', 'text-red-800');
+                return;
+            }
 
             if (!isAuthReady || !userId) {
                 showMessage("Por favor, espera a que la conexión con Firebase se establezca.", 'bg-yellow-100', 'text-yellow-800');
@@ -444,7 +471,6 @@
 
             tabButtons.forEach(button => {
                 button.addEventListener('click', (e) => {
-                    // Prevenir el comportamiento por defecto del enlace para evitar salir de la "App"
                     e.preventDefault(); 
                     
                     const targetId = button.id.replace('-btn', '');
@@ -470,6 +496,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 
