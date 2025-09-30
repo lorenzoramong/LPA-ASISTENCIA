@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asistencia Padel LPA</title>
+    <!-- Carga de Tailwind CSS para un diseño moderno -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+    </style>
+    <!-- Importar SheetJS (xlsx.js) para exportar a Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
+</head>
+<body class="min-h-screen">
+
+    <!-- Encabezado de la Aplicación -->
+    <header class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-gray-800">
+                <span class="text-red-600">Asistencia</span> LPA - Liga de Pádel
+            </h1>
+            <div id="auth-status" class="text-sm font-medium">
+                <span id="loading-spinner" class="inline-flex items-center">
+                    <!-- Icono de carga (azul) -->
+                    <svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span class="text-blue-600 font-semibold">Usuario: Cargando...</span>
+                </span>
+                <span id="user-info" class="hidden text-gray-600"></span>
+            </div>
+        </div>
+        <!-- Barra de navegación de pestañas -->
+        <nav class="border-b border-gray-200">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex space-x-4">
+                    <!-- Los enlaces de navegación ahora tienen un atributo 'data-tab' y un ID -->
+                    <a id="tab-registro-btn" href="#" data-tab="registro-asistencia" class="tab-link py-3 px-3 border-b-2 font-medium text-sm text-blue-600 border-blue-600">Registro de Asistencia</a>
+                    <a id="tab-reporte-btn" href="#" data-tab="reporte-individual" class="tab-link py-3 px-3 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 border-transparent">Reporte Individual</a>
+                    <a id="tab-gestion-btn" href="#" data-tab="gestion-academia" class="tab-link py-3 px-3 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 border-transparent">Gestión de Academia</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Contenido Principal (Contenedor de Pestañas) -->
+    <main id="main-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 hidden">
+        
+        <!-- PESTAÑA 1: REGISTRO DE ASISTENCIA (Visible por defecto en la inicialización) -->
+        <div id="registro-asistencia" class="tab-content">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Columna de Instrucciones -->
+                <div class="md:col-span-1 bg-white p-6 rounded-xl shadow-lg h-full">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">Instrucciones</h2>
+                    <p class="text-gray-600 text-sm">
+                        Selecciona la **"fecha"** y **"horario"** para tomar la asistencia. Haz click en el botón del estado para cambiarlo entre **"PRESENTE"** y **"AUSENTE"**.
+                        Usa la pestaña "Gestión de Academia" para añadir/eliminar jugadores o gestionar horarios.
+                    </p>
+                    <!-- Botón de exportar a Excel ELIMINADO de aquí -->
+                </div>
+                <!-- Columna de Asistencia Diaria (Simulación de contenido) -->
+                <div class="md:col-span-2 bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-600 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
+                        </svg>
+                        Asistencia Diaria
+                    </h2>
+                    <!-- Formulario simulado (Fecha y Horario) -->
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label for="fecha" class="block text-xs font-medium text-gray-700">Fecha:</label>
+                            <input type="date" id="fecha" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm">
+                        </div>
+                        <div>
+                            <label for="horario" class="block text-xs font-medium text-gray-700">Horario:</label>
+                            <select id="horario" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm">
+                                <option value="">Seleccionar Horario</option>
+                                <!-- Los horarios se cargarán aquí dinámicamente -->
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Tabla de Asistencia -->
+                    <div class="overflow-x-auto">
+                        <table id="attendance-table" class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ALUMNO</th>
+                                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ESTADO</th>
+                                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TOTAL CLASES</th>
+                                </tr>
+                            </thead>
+                            <tbody id="player-list" class="bg-white divide-y divide-gray-200">
+                                <!-- Los datos se cargarán aquí -->
+                                <tr><td colspan="3" class="px-3 py-4 text-center text-sm text-gray-400">Cargando lista de jugadores...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PESTAÑA 2: REPORTE INDIVIDUAL (Oculta por defecto) -->
+        <div id="reporte-individual" class="tab-content hidden">
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Reportes y Exportación</h2>
+                <p class="text-gray-600 mb-6">Selecciona un jugador para ver su reporte individual, o exporta el resumen de toda la academia.</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Columna de Selección de Jugador -->
+                    <div>
+                        <label for="select-player-report" class="block text-sm font-medium text-gray-700">Seleccionar Jugador para Reporte:</label>
+                        <select id="select-player-report" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm">
+                            <option value="">-- Seleccionar Jugador --</option>
+                            <!-- La lista de jugadores cargada de Firestore irá aquí -->
+                        </select>
+                    </div>
+
+                    <!-- Columna de Exportación a Excel (Ahora centralizada aquí) -->
+                    <div class="md:mt-6">
+                        <button id="export-excel-btn" class="w-full px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition duration-200 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0-3a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM7 7a1 1 0 011-1h4a1 1 0 110 2H8a1 1 0 01-1-1zm0 4a1 1 0 011-1h4a1 1 0 110 2H8a1 1 0 01-1-1zM3 3a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" />
+                            </svg>
+                            Descargar Reporte General (Excel)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Área para mostrar el reporte individual si se selecciona un jugador -->
+                <div id="individual-report-area" class="mt-8 p-4 border border-gray-200 rounded-lg bg-gray-50 hidden">
+                    <p class="text-gray-700 text-center">Detalles del Reporte Individual aparecerán aquí.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- PESTAÑA 3: GESTIÓN DE ACADEMIA (Oculta por defecto) -->
+        <div id="gestion-academia" class="tab-content hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Bloque 1: Añadir Nuevo Jugador (CON SELECT DE HORARIO) -->
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">Añadir Nuevo Jugador</h2>
+                    <form id="add-player-form">
+                        <div class="mb-4">
+                            <label for="player-name" class="block text-sm font-medium text-gray-700">Nombre Completo del Jugador:</label>
+                            <input type="text" id="player-name" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm">
+                        </div>
+                        <div class="mb-6">
+                            <label for="player-schedule" class="block text-sm font-medium text-gray-700">Asignar Horario de Clase:</label>
+                            <select id="player-schedule" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm">
+                                <option value="">-- Seleccionar Horario --</option>
+                                <!-- Opciones de horario se cargan aquí -->
+                            </select>
+                            <p id="schedule-warning" class="text-xs text-red-500 mt-1 hidden">Debes agregar horarios primero en el panel de la derecha.</p>
+                        </div>
+                        <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition duration-200">
+                            Guardar Jugador
+                        </button>
+                    </form>
+                    <p id="player-message" class="mt-3 text-sm hidden"></p>
+                </div>
+
+                <!-- Bloque 2: Añadir Nuevo Horario -->
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">Añadir Nuevo Horario</h2>
+                    <form id="add-schedule-form">
+                        <div class="mb-4">
+                            <label for="schedule-time" class="block text-sm font-medium text-gray-700">Horario (ej: 18:00 - 19:00):</label>
+                            <input type="text" id="schedule-time" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm" placeholder="HH:MM - HH:MM">
+                        </div>
+                        <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition duration-200">
+                            Guardar Horario
+                        </button>
+                    </form>
+                    <p id="schedule-message" class="mt-3 text-sm hidden"></p>
+                </div>
+            </div>
+            
+            <!-- LISTADO DE JUGADORES (para editar/eliminar) -->
+            <div class="mt-8 bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Jugadores Registrados</h2>
+                <div id="registered-players-list" class="space-y-2">
+                    <p class="text-gray-500 text-sm">Cargando jugadores registrados...</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+    
+    <!-- Script de Firebase y Lógica de la Aplicación -->
+    <script type="module">
+        // Importaciones de Firebase 
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, onSnapshot, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // **VARIABLES GLOBALES ESENCIALES DEL ENTORNO**
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let app, db, auth;
+        let userId = null;
+        let allPlayers = []; // Almacena todos los jugadores cargados
+        let allSchedules = []; // Almacena todos los horarios cargados
+
+        // Elementos de la UI
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const userInfoSpan = document.getElementById('user-info');
+        const mainContent = document.getElementById('main-content');
+        const playerListBody = document.getElementById('player-list');
+        const tabLinks = document.querySelectorAll('.tab-link');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const exportExcelBtn = document.getElementById('export-excel-btn'); // Botón de exportar
+        const playerReportSelect = document.getElementById('select-player-report');
+        const registeredPlayersList = document.getElementById('registered-players-list');
+        const playerScheduleSelect = document.getElementById('player-schedule'); // Select en Añadir Jugador
+        const scheduleWarning = document.getElementById('schedule-warning');
+        
+        // Formularios de Gestión de Academia
+        const addPlayerForm = document.getElementById('add-player-form');
+        const addScheduleForm = document.getElementById('add-schedule-form');
+        const playerNameInput = document.getElementById('player-name');
+        const scheduleTimeInput = document.getElementById('schedule-time');
+        const playerMessage = document.getElementById('player-message');
+        const scheduleMessage = document.getElementById('schedule-message');
+
+
+        /**
+         * Maneja el estado de la UI (Cargando vs. Contenido)
+         * @param {string} uid ID del usuario actual.
+         */
+        function updateUI(uid) {
+            if (uid) {
+                loadingSpinner.classList.add('hidden');
+                userInfoSpan.textContent = `Usuario ID: ${uid}`;
+                userInfoSpan.classList.remove('hidden');
+                mainContent.classList.remove('hidden'); 
+            } else {
+                loadingSpinner.classList.add('hidden');
+                userInfoSpan.textContent = `Error de Autenticación`;
+                userInfoSpan.classList.remove('hidden');
+            }
+        }
+
+        /**
+         * Lógica de inicialización de Firebase
+         */
+        async function initFirebase() {
+            if (!firebaseConfig) {
+                console.error("ERROR: firebaseConfig no está definido. No se puede inicializar Firebase.");
+                return;
+            }
+
+            try {
+                // 1. Inicializar Firebase
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                // 2. Intentar autenticación con el token proporcionado o de forma anónima
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                // 3. Establecer el observador de estado de autenticación (IMPORTANTE)
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        console.log("Usuario autenticado. UID:", userId);
+                        updateUI(userId);
+                        // Cargar datos principales (los horarios se cargan antes que los jugadores)
+                        loadSchedules(); 
+                        loadPadelPlayers(); 
+                    } else {
+                        userId = null;
+                        console.log("Usuario desconectado o error de autenticación.");
+                        updateUI(null);
+                    }
+                });
+
+                setupTabs();
+                setupEventListeners();
+
+            } catch (error) {
+                console.error("Error al inicializar o autenticar Firebase:", error);
+                loadingSpinner.classList.add('hidden');
+                userInfoSpan.textContent = `Error: ${error.message.substring(0, 50)}...`;
+                userInfoSpan.classList.remove('hidden');
+            }
+        }
+
+        /**
+         * Configura los Event Listeners para la funcionalidad de la app.
+         */
+        function setupEventListeners() {
+            // Event Listener para el botón de exportar (ahora en Reporte Individual)
+            exportExcelBtn.addEventListener('click', exportToExcel);
+
+            // Event Listener para añadir jugador
+            addPlayerForm.addEventListener('submit', handleAddPlayer);
+
+            // Event Listener para añadir horario
+            addScheduleForm.addEventListener('submit', handleAddSchedule);
+
+            // Listener para los botones de eliminar jugadores (Delegación de eventos)
+            registeredPlayersList.addEventListener('click', (e) => {
+                if (e.target.classList.contains('delete-player-btn')) {
+                    const playerId = e.target.closest('.player-item').dataset.id;
+                    if (playerId && confirm("¿Estás seguro de que deseas eliminar a este jugador? Esta acción es irreversible.")) {
+                        handleDeletePlayer(playerId);
+                    }
+                }
+            });
+        }
+        
+        // --- LÓGICA DE GESTIÓN DE PESTAÑAS ---
+        function setupTabs() {
+            tabLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault(); 
+                    const targetTabId = link.dataset.tab;
+
+                    // Ocultar todo el contenido y desactivar todos los enlaces
+                    tabContents.forEach(content => content.classList.add('hidden'));
+                    tabLinks.forEach(l => {
+                        l.classList.remove('text-blue-600', 'border-blue-600');
+                        l.classList.add('text-gray-500', 'border-transparent');
+                    });
+
+                    // Mostrar el contenido de la pestaña objetivo
+                    const targetContent = document.getElementById(targetTabId);
+                    if (targetContent) {
+                        targetContent.classList.remove('hidden');
+                    }
+
+                    // Activar el estilo del enlace clicado
+                    link.classList.add('text-blue-600', 'border-blue-600');
+                    link.classList.remove('text-gray-500', 'border-transparent');
+                });
+            });
+        }
+
+
+        // --- LÓGICA DE EXPORTACIÓN A EXCEL (Ahora exporta TODOS los jugadores) ---
+
+        /**
+         * Exporta el resumen de todos los jugadores a un archivo Excel (.xlsx).
+         */
+        function exportToExcel() {
+            if (allPlayers.length === 0) {
+                alert("No hay jugadores registrados para exportar.");
+                return;
+            }
+
+            // Preparar los datos para la hoja de cálculo
+            const data = allPlayers.map(player => {
+                // Buscar el nombre del horario basado en el ID, si existe
+                const schedule = allSchedules.find(s => s.id === player.scheduleId);
+                const scheduleTime = schedule ? schedule.time : 'No Asignado';
+
+                return {
+                    'Nombre del Jugador': player.name || 'N/A',
+                    'Horario Asignado': scheduleTime,
+                    'Total de Clases Asistidas': player.totalClasses || 0,
+                    // Aquí se pueden agregar más campos de reporte en el futuro
+                };
+            });
+
+            try {
+                const worksheet = XLSX.utils.json_to_sheet(data);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "Reporte General");
+
+                const date = new Date().toISOString().slice(0, 10);
+                XLSX.writeFile(workbook, `Reporte_General_LPA_${date}.xlsx`);
+                console.log("Reporte general exportado a Excel.");
+
+            } catch (error) {
+                console.error("Error al exportar a Excel:", error);
+                alert(`Error al exportar: ${error.message}`);
+            }
+        }
+
+
+        // --- LÓGICA DE FIREBASE: CARGA DE DATOS ---
+
+        /**
+         * Carga los datos de los jugadores desde Firestore.
+         */
+        function loadPadelPlayers() {
+            if (!db || !userId) return;
+
+            const playersColRef = collection(db, `artifacts/${appId}/users/${userId}/players`);
+
+            onSnapshot(playersColRef, (snapshot) => {
+                allPlayers = []; // Resetear la lista global
+                snapshot.forEach(doc => {
+                    allPlayers.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // Renderizar en todas las vistas necesarias
+                renderPlayersAttendance(allPlayers);
+                renderPlayerReportSelect(allPlayers);
+                renderRegisteredPlayersList(allPlayers);
+
+                console.log("Datos de jugadores cargados y actualizados:", allPlayers);
+            }, (error) => {
+                console.error("Error al escuchar jugadores en Firestore:", error);
+                playerListBody.innerHTML = `<tr><td colspan="3" class="px-3 py-4 text-center text-sm text-red-500">Error al cargar datos: ${error.message}</td></tr>`;
+            });
+        }
+
+        /**
+         * Carga los horarios desde Firestore.
+         */
+        function loadSchedules() {
+            if (!db || !userId) return;
+
+            const schedulesColRef = collection(db, `artifacts/${appId}/users/${userId}/schedules`);
+            const horarioSelect = document.getElementById('horario'); // Select en Registro de Asistencia
+            
+            // Limpiar select de horarios
+            horarioSelect.innerHTML = `<option value="">Seleccionar Horario</option>`;
+            playerScheduleSelect.innerHTML = `<option value="">-- Seleccionar Horario --</option>`;
+
+
+            onSnapshot(schedulesColRef, (snapshot) => {
+                allSchedules = [];
+                snapshot.forEach(doc => {
+                    const schedule = { id: doc.id, ...doc.data() };
+                    allSchedules.push(schedule);
+                });
+
+                // Llenar ambos selects de horarios
+                allSchedules.forEach(schedule => {
+                    const option1 = document.createElement('option');
+                    option1.value = schedule.id; // Usar el ID del documento
+                    option1.textContent = schedule.time;
+                    horarioSelect.appendChild(option1);
+
+                    const option2 = document.createElement('option');
+                    option2.value = schedule.id; // Usar el ID del documento
+                    option2.textContent = schedule.time;
+                    playerScheduleSelect.appendChild(option2);
+                });
+                
+                // Mostrar advertencia si no hay horarios para asignar
+                if (allSchedules.length === 0) {
+                    scheduleWarning.classList.remove('hidden');
+                } else {
+                    scheduleWarning.classList.add('hidden');
+                }
+
+                console.log("Horarios cargados:", allSchedules);
+            }, (error) => {
+                console.error("Error al cargar horarios:", error);
+            });
+        }
+
+
+        // --- LÓGICA DE FIREBASE: GESTIÓN DE ACADEMIA ---
+
+        /**
+         * Maneja el envío del formulario para añadir un nuevo jugador, incluyendo el horario.
+         */
+        async function handleAddPlayer(e) {
+            e.preventDefault();
+            const playerName = playerNameInput.value.trim();
+            const scheduleId = playerScheduleSelect.value; // Obtener el ID del horario seleccionado
+
+            if (!playerName || !scheduleId || !db || !userId) {
+                displayMessage(playerMessage, "Por favor, ingresa nombre y selecciona un horario.", 'red');
+                return;
+            }
+            if (allSchedules.length === 0) {
+                displayMessage(playerMessage, "Error: Primero debes agregar horarios.", 'red');
+                return;
+            }
+
+            try {
+                const playersColRef = collection(db, `artifacts/${appId}/users/${userId}/players`);
+                await addDoc(playersColRef, {
+                    name: playerName,
+                    scheduleId: scheduleId, // Guardar la referencia al horario
+                    totalClasses: 0,
+                    createdAt: new Date()
+                });
+
+                playerNameInput.value = '';
+                playerScheduleSelect.value = '';
+                displayMessage(playerMessage, `Jugador "${playerName}" agregado con éxito.`, 'green');
+
+            } catch (error) {
+                console.error("Error al añadir jugador:", error);
+                displayMessage(playerMessage, `Error al guardar: ${error.message}`, 'red');
+            }
+        }
+
+        /**
+         * Maneja el envío del formulario para añadir un nuevo horario.
+         */
+        async function handleAddSchedule(e) {
+            e.preventDefault();
+            const scheduleTime = scheduleTimeInput.value.trim();
+
+            if (!scheduleTime || !db || !userId) {
+                displayMessage(scheduleMessage, "Por favor, ingresa un horario válido.", 'red');
+                return;
+            }
+
+            try {
+                const schedulesColRef = collection(db, `artifacts/${appId}/users/${userId}/schedules`);
+                await addDoc(schedulesColRef, {
+                    time: scheduleTime,
+                    createdAt: new Date()
+                });
+
+                scheduleTimeInput.value = '';
+                displayMessage(scheduleMessage, `Horario "${scheduleTime}" agregado con éxito.`, 'green');
+
+            } catch (error) {
+                console.error("Error al añadir horario:", error);
+                displayMessage(scheduleMessage, `Error al guardar: ${error.message}`, 'red');
+            }
+        }
+
+        /**
+         * Maneja la eliminación de un jugador.
+         * @param {string} playerId ID del documento del jugador a eliminar.
+         */
+        async function handleDeletePlayer(playerId) {
+            if (!db || !userId || !playerId) return;
+            
+            try {
+                const playerDocRef = doc(db, `artifacts/${appId}/users/${userId}/players`, playerId);
+                await deleteDoc(playerDocRef);
+                console.log("Jugador eliminado:", playerId);
+                // La UI se actualizará automáticamente gracias a onSnapshot
+            } catch (error) {
+                console.error("Error al eliminar jugador:", error);
+                alert(`No se pudo eliminar al jugador: ${error.message}`); // Usamos alert temporalmente solo para errores críticos de eliminación
+            }
+        }
+        
+
+        // --- LÓGICA DE RENDERIZADO DE UI ---
+
+        /**
+         * Renderiza la lista de jugadores en la tabla de Asistencia.
+         * @param {Array<Object>} players Lista de jugadores
+         */
+        function renderPlayersAttendance(players) {
+            if (players.length === 0) {
+                playerListBody.innerHTML = `<tr><td colspan="3" class="px-3 py-4 text-center text-sm text-gray-500">No hay jugadores registrados. Usa la pestaña "Gestión de Academia" para añadir uno.</td></tr>`;
+                return;
+            }
+
+            playerListBody.innerHTML = players.map(player => `
+                <tr class="hover:bg-gray-100 transition-colors duration-150" data-player-id="${player.id}">
+                    <td class="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${player.name || 'N/A'}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm">
+                        <!-- Botón de estado: PRESENTE/AUSENTE (Simulación) -->
+                        <button class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 transition duration-150 hover:opacity-80 status-btn" data-status="PRESENTE">
+                            PRESENTE
+                        </button>
+                    </td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">${player.totalClasses || 0}</td>
+                </tr>
+            `).join('');
+            
+            // TODO: Añadir lógica para cambiar el estado de asistencia con un clic en el botón
+        }
+        
+        /**
+         * Renderiza la lista de jugadores en el select de Reporte Individual.
+         * @param {Array<Object>} players Lista de jugadores
+         */
+        function renderPlayerReportSelect(players) {
+            playerReportSelect.innerHTML = `<option value="">-- Seleccionar Jugador --</option>`;
+            
+            players.forEach(player => {
+                const option = document.createElement('option');
+                option.value = player.id;
+                option.textContent = player.name || 'N/A';
+                playerReportSelect.appendChild(option);
+            });
+        }
+
+        /**
+         * Renderiza la lista de jugadores en la pestaña Gestión de Academia.
+         * @param {Array<Object>} players Lista de jugadores
+         */
+        function renderRegisteredPlayersList(players) {
+            if (players.length === 0) {
+                registeredPlayersList.innerHTML = `<p class="text-gray-500 text-sm">No hay jugadores registrados.</p>`;
+                return;
+            }
+
+            // Mapear los jugadores, añadiendo el nombre del horario
+            const playerHtml = players.map(player => {
+                // Buscar el nombre del horario (allSchedules ya está cargado por loadSchedules)
+                const schedule = allSchedules.find(s => s.id === player.scheduleId);
+                const scheduleTime = schedule ? schedule.time : 'Horario No Asignado';
+
+                return `
+                    <div class="player-item flex justify-between items-center p-3 bg-gray-50 border border-gray-200 rounded-lg" data-id="${player.id}">
+                        <div>
+                            <span class="font-medium text-gray-800">${player.name}</span>
+                            <span class="block text-xs text-gray-500">Horario: ${scheduleTime}</span>
+                        </div>
+                        <div>
+                            <button class="delete-player-btn px-2 py-1 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 text-sm transition duration-150">Eliminar</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            registeredPlayersList.innerHTML = playerHtml;
+        }
+        
+        /**
+         * Muestra un mensaje temporal en la interfaz (éxito/error).
+         * @param {HTMLElement} element Elemento donde mostrar el mensaje.
+         * @param {string} message Mensaje a mostrar.
+         * @param {('green'|'red')} type Tipo de mensaje.
+         */
+        function displayMessage(element, message, type) {
+            element.textContent = message;
+            element.classList.remove('hidden', 'text-green-600', 'text-red-600');
+            element.classList.add(`text-${type}-600`);
+            
+            setTimeout(() => {
+                element.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Iniciar la aplicación de Firebase al cargar la página
+        window.onload = initFirebase;
+
+    </script>
+</body>
+</html>
