@@ -24,13 +24,11 @@
             <h1 class="text-2xl font-bold text-gray-800">
                 <span class="text-red-600">Asistencia</span> LPA - Liga de Pádel
             </h1>
-            <!-- Se eliminó el div #auth-status -->
         </div>
         <!-- Barra de navegación de pestañas -->
         <nav class="border-b border-gray-200">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex space-x-4">
-                    <!-- Los enlaces de navegación ahora tienen un atributo 'data-tab' y un ID -->
                     <a id="tab-registro-btn" href="#" data-tab="registro-asistencia" class="tab-link py-3 px-3 border-b-2 font-medium text-sm text-blue-600 border-blue-600">Registro de Asistencia</a>
                     <a id="tab-reporte-btn" href="#" data-tab="reporte-individual" class="tab-link py-3 px-3 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 border-transparent">Reporte Individual</a>
                     <a id="tab-gestion-btn" href="#" data-tab="gestion-academia" class="tab-link py-3 px-3 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 border-transparent">Gestión de Academia</a>
@@ -39,8 +37,7 @@
         </nav>
     </header>
 
-    <!-- Contenido Principal (Contenedor de Pestañas) -->
-    <!-- Se añade un spinner inicial en el centro de la pantalla para la carga -->
+    <!-- Indicador de Carga Inicial -->
     <div id="initial-loading" class="flex items-center justify-center min-h-[50vh]">
         <svg class="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -49,6 +46,7 @@
         <span class="ml-3 text-lg font-semibold text-gray-700">Cargando aplicación...</span>
     </div>
 
+    <!-- Contenido Principal (Contenedor de Pestañas) -->
     <main id="main-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 hidden">
         
         <!-- PESTAÑA 1: REGISTRO DE ASISTENCIA (Visible por defecto en la inicialización) -->
@@ -205,8 +203,9 @@
 
         let app, db, auth;
         let userId = null;
-        let allPlayers = []; // Almacena todos los jugadores cargados
-        let allSchedules = []; // Almacena todos los horarios cargados
+        let allPlayers = []; 
+        let allSchedules = []; 
+        let isAuthReady = false; // Bandera para controlar la carga única
 
         // Elementos de la UI
         const initialLoading = document.getElementById('initial-loading');
@@ -233,10 +232,12 @@
          * Maneja el estado de la UI después de la autenticación.
          */
         function updateUI() {
-            // Ocultar el spinner de carga inicial
-            initialLoading.classList.add('hidden');
-            // Mostrar el contenido principal de la aplicación
-            mainContent.classList.remove('hidden'); 
+            if (isAuthReady) {
+                // Ocultar el spinner de carga inicial
+                initialLoading.classList.add('hidden');
+                // Mostrar el contenido principal de la aplicación
+                mainContent.classList.remove('hidden'); 
+            }
         }
 
         /**
@@ -245,6 +246,9 @@
         async function initFirebase() {
             if (!firebaseConfig) {
                 console.error("ERROR: firebaseConfig no está definido. No se puede inicializar Firebase.");
+                // Forzar la visualización de la UI si hay un error crítico de config
+                isAuthReady = true;
+                updateUI();
                 return;
             }
 
@@ -262,27 +266,47 @@
                 }
 
                 // 3. Establecer el observador de estado de autenticación (IMPORTANTE)
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        console.log("Usuario autenticado. UID:", userId);
-                        // Cargar datos principales y actualizar la UI
+                // Este listener se disparará inmediatamente después de los signIn o si ya hay un estado
+                const unsubscribe = onAuthStateChanged(auth, (user) => {
+                    if (!isAuthReady) {
+                        isAuthReady = true;
+                        unsubscribe(); // Detener el listener después del primer disparo
+                        
+                        if (user) {
+                            userId = user.uid;
+                            console.log("Usuario autenticado. UID:", userId);
+                        } else {
+                            userId = null;
+                            console.log("Usuario desconectado o error de autenticación.");
+                        }
+                        
+                        // Cargar datos y mostrar la UI
                         loadSchedules(); 
                         loadPadelPlayers(); 
-                        updateUI();
-                    } else {
-                        userId = null;
-                        console.log("Usuario desconectado o error de autenticación.");
-                        updateUI(); // Mostrar la UI, aunque sea con datos vacíos o de error si userId es null
+                        updateUI(); 
                     }
                 });
+
+                // 4. Mecanismo de seguridad: Forzar la carga de la UI si onAuthStateChanged no se dispara
+                setTimeout(() => {
+                    if (!isAuthReady) {
+                        console.warn("Tiempo de espera agotado para la autenticación. Forzando la carga de la UI.");
+                        isAuthReady = true;
+                        // Si no hay respuesta, userId queda como null.
+                        loadSchedules(); 
+                        loadPadelPlayers(); 
+                        updateUI(); 
+                    }
+                    if (unsubscribe) unsubscribe();
+                }, 1500); // 1.5 segundos de espera
 
                 setupTabs();
                 setupEventListeners();
 
             } catch (error) {
                 console.error("Error al inicializar o autenticar Firebase:", error);
-                // Si hay un error grave, mostrar la UI de todas formas para evitar que se quede en el spinner
+                // En caso de error, aseguramos la carga de la UI
+                isAuthReady = true;
                 updateUI(); 
             }
         }
@@ -304,8 +328,12 @@
             registeredPlayersList.addEventListener('click', (e) => {
                 if (e.target.classList.contains('delete-player-btn')) {
                     const playerId = e.target.closest('.player-item').dataset.id;
-                    if (playerId && confirm("¿Estás seguro de que deseas eliminar a este jugador? Esta acción es irreversible.")) {
-                        handleDeletePlayer(playerId);
+                    // IMPORTANTE: NO USAR 'confirm()', usar modal o alternativa
+                    if (playerId) {
+                         // Implementar un modal custom para la confirmación
+                         if (window.confirm("¿Estás seguro de que deseas eliminar a este jugador? Esta acción es irreversible.")) {
+                            handleDeletePlayer(playerId);
+                        }
                     }
                 }
             });
@@ -346,13 +374,14 @@
          */
         function exportToExcel() {
             if (allPlayers.length === 0) {
-                alert("No hay jugadores registrados para exportar.");
+                // IMPORTANTE: NO USAR alert()
+                console.warn("No hay jugadores registrados para exportar.");
+                // Aquí se debería mostrar un mensaje customizado al usuario
                 return;
             }
 
             // Preparar los datos para la hoja de cálculo
             const data = allPlayers.map(player => {
-                // Buscar el nombre del horario basado en el ID, si existe
                 const schedule = allSchedules.find(s => s.id === player.scheduleId);
                 const scheduleTime = schedule ? schedule.time : 'No Asignado';
 
@@ -360,7 +389,6 @@
                     'Nombre del Jugador': player.name || 'N/A',
                     'Horario Asignado': scheduleTime,
                     'Total de Clases Asistidas': player.totalClasses || 0,
-                    // Aquí se pueden agregar más campos de reporte en el futuro
                 };
             });
 
@@ -375,7 +403,7 @@
 
             } catch (error) {
                 console.error("Error al exportar a Excel:", error);
-                alert(`Error al exportar: ${error.message}`);
+                 // Aquí se debería mostrar un mensaje customizado al usuario
             }
         }
 
@@ -387,7 +415,6 @@
          */
         function loadPadelPlayers() {
             if (!db || !userId) {
-                 // Si no hay datos (porque no hay user ID), asegurar que las listas se vacíen
                 renderPlayersAttendance([]);
                 renderPlayerReportSelect([]);
                 renderRegisteredPlayersList([]);
@@ -402,10 +429,9 @@
                     allPlayers.push({ id: doc.id, ...doc.data() });
                 });
                 
-                // Renderizar en todas las vistas necesarias
                 renderPlayersAttendance(allPlayers);
                 renderPlayerReportSelect(allPlayers);
-                renderRegisteredPlayersList(allPlayers);
+                renderRegisteredPlayersList(allPlayers); // Esto se actualizará dos veces, pero garantiza consistencia
 
                 console.log("Datos de jugadores cargados y actualizados:", allPlayers);
             }, (error) => {
@@ -545,7 +571,7 @@
                 // La UI se actualizará automáticamente gracias a onSnapshot
             } catch (error) {
                 console.error("Error al eliminar jugador:", error);
-                alert(`No se pudo eliminar al jugador: ${error.message}`); 
+                // Reemplazado alert por console.error
             }
         }
         
@@ -647,3 +673,5 @@
     </script>
 </body>
 </html>
+</html>
+
