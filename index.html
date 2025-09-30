@@ -92,7 +92,7 @@
     <!-- Capa de Carga Inicial -->
     <div id="loading-overlay" class="loading-overlay hidden">
         <div class="animate-spin rounded-full h-12 w-12 border-4 border-b-transparent border-blue-600 mb-4"></div>
-        <p class="text-gray-700 font-semibold">Cargando aplicación y autenticación...</p>
+        <p class="text-gray-700 font-semibold" id="loading-text">Cargando aplicación y autenticación...</p>
     </div>
     
     <div class="container rounded-xl">
@@ -186,6 +186,7 @@
         
         // --- Referencias DOM ---
         const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingText = document.getElementById('loading-text');
         const authMessage = document.getElementById('auth-message');
         const userIdCode = document.getElementById('user-id');
         const registroForm = document.getElementById('registro-form');
@@ -198,6 +199,8 @@
         // --- Variables de Firebase ---
         let app, db, auth, userId = null;
         let isAuthReady = false;
+        let retryCount = 0;
+        const MAX_RETRIES = 5;
 
         // --- Inicialización de Firebase y Autenticación ---
         async function initializeFirebase() {
@@ -210,18 +213,11 @@
 
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
-                auth = getAuth(app);
+                auth = getAuth(app); // Se obtiene la instancia de Auth aquí
                 
                 authMessage.textContent = 'Autenticando...';
-
-                // Usar el token personalizado si está disponible, si no, iniciar sesión anónimamente
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-
-                // Listener para el estado de la autenticación
+                
+                // Mover el listener de estado de autenticación aquí, después de obtener 'auth'
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         userId = user.uid;
@@ -231,34 +227,74 @@
                         document.getElementById('auth-status').classList.replace('text-blue-800', 'text-green-800');
                         submitBtn.disabled = false;
                         isAuthReady = true;
+                        loadingOverlay.classList.add('hidden');
                         
                         // Una vez que el usuario está listo, inicia la escucha de datos
                         setupRealtimeListener();
                     } else {
-                        userId = crypto.randomUUID(); // ID temporal si falla la autenticación (no debería ocurrir con el manejo de arriba)
-                        userIdCode.textContent = `Error de autenticación o reglas de seguridad. ID Temporal: ${userId}`;
-                        authMessage.textContent = 'Error: No se pudo iniciar sesión. Verifica la configuración de Auth en Firebase.';
-                        document.getElementById('auth-status').classList.replace('bg-blue-100', 'bg-red-100');
-                        document.getElementById('auth-status').classList.replace('text-blue-800', 'text-red-800');
-                        submitBtn.disabled = true;
-                        isAuthReady = true; // Sigue siendo true para que intente escuchar (aunque fallará sin auth.uid)
-                        
-                        // Si falla la autenticación, se asume que no podrá acceder a datos privados
-                        historialLista.innerHTML = `<p class="text-center text-red-500 mt-4">Error de seguridad: No tienes permisos para ver el historial.</p>`;
-                        noRegistros.classList.add('hidden');
+                        // Esto se llama después del primer intento si falla o si la sesión caduca
+                        if (isAuthReady === false) { // Solo si no se ha configurado antes
+                            handleAuthError(new Error("No se pudo establecer la conexión segura después de varios intentos."));
+                        }
                     }
-                    loadingOverlay.classList.add('hidden');
                 });
 
+                // Iniciar el intento de autenticación (que activará el listener de arriba)
+                await attemptAuth(initialAuthToken, retryCount);
+
             } catch (error) {
-                console.error("Error al inicializar Firebase o al autenticar:", error);
-                authMessage.textContent = `ERROR: ${error.message}`;
-                document.getElementById('auth-status').classList.replace('bg-blue-100', 'bg-red-100');
-                document.getElementById('auth-status').classList.replace('text-blue-800', 'text-red-800');
-                submitBtn.disabled = true;
-                loadingOverlay.classList.add('hidden');
+                console.error("Error fatal al inicializar Firebase:", error);
+                handleAuthError(error);
             }
         }
+        
+        // Función con backoff exponencial para reintentar la autenticación
+        async function attemptAuth(token, attempt) {
+            loadingText.textContent = `Autenticando... (Intento ${attempt + 1}/${MAX_RETRIES})`;
+            
+            try {
+                // Usar el token personalizado si está disponible, si no, iniciar sesión anónimamente
+                if (token) {
+                    await signInWithCustomToken(auth, token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                // Si tiene éxito, onAuthStateChanged se encargará de configurar el estado final.
+                
+            } catch (error) {
+                console.error(`Error de autenticación en el intento ${attempt + 1}:`, error);
+                
+                if (attempt < MAX_RETRIES - 1) {
+                    retryCount++;
+                    const delay = Math.pow(2, attempt) * 1000 + (Math.random() * 1000); // 1s, 2s, 4s, 8s, ... + jitter
+                    loadingText.textContent = `Fallo. Reintentando en ${Math.floor(delay/1000)}s...`;
+                    
+                    // Usar setTimeout con Promise para esperar
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    await attemptAuth(token, retryCount); // Llamada recursiva
+                } else {
+                    handleAuthError(error);
+                }
+            }
+        }
+
+        // Ya no necesitamos este listener aquí porque lo hemos movido dentro de initializeFirebase
+
+        function handleAuthError(error) {
+            userId = crypto.randomUUID(); 
+            userIdCode.textContent = `Error de autenticación. ID Temporal: ${userId}`;
+            authMessage.textContent = `ERROR: No se pudo iniciar sesión. ${error.message}`;
+            document.getElementById('auth-status').classList.replace('bg-blue-100', 'bg-red-100');
+            document.getElementById('auth-status').classList.replace('text-blue-800', 'text-red-800');
+            submitBtn.disabled = true;
+            isAuthReady = true; 
+            loadingOverlay.classList.add('hidden');
+            
+            // Si falla la autenticación, se asume que no podrá acceder a datos privados
+            historialLista.innerHTML = `<p class="text-center text-red-500 mt-4">Error de seguridad: No tienes permisos para ver el historial.</p>`;
+            noRegistros.classList.add('hidden');
+        }
+
 
         // --- Lógica del Listener en Tiempo Real (onSnapshot) ---
         function setupRealtimeListener() {
@@ -299,7 +335,8 @@
             }, (error) => {
                 console.error("Error al escuchar cambios en el historial:", error);
                 historialLoading.classList.add('hidden');
-                historialLista.innerHTML = `<p class="text-center text-red-500 mt-4">Error al cargar datos: ${error.message}</p>`;
+                // Esto podría indicar que las reglas de seguridad están fallando.
+                historialLista.innerHTML = `<p class="text-center text-red-500 mt-4">Error al cargar datos. Verifica tus permisos: ${error.message}</p>`;
             });
         }
         
@@ -433,6 +470,7 @@
     </script>
 </body>
 </html>
+
 
 
 
