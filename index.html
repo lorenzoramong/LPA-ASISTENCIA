@@ -60,7 +60,9 @@
                 display: flex;
             }
             .container-content {
-                padding: 0;
+                /* Padding horizontal 0 para móvil, vertical se gestiona en main-content */
+                padding-left: 0;
+                padding-right: 0;
             }
             .main-content {
                  /* Dejar espacio para el header (arriba) y el navbar (abajo) */
@@ -78,9 +80,9 @@
             .tab-content {
                 padding: 1rem;
             }
+             /* El estado de auth ahora se muestra solo en el header */
             .auth-status-container {
-                max-width: none;
-                margin: 1rem;
+                display: none; 
             }
         }
 
@@ -142,9 +144,10 @@
             <div class="flex items-center space-x-4">
                 <h1 class="text-xl font-bold text-red-600">Asistencia LPA - Liga de Pádel</h1>
             </div>
-            <!-- Estado de Usuario para Escritorio -->
-            <div id="user-status-desktop" class="text-sm text-gray-500 hidden sm:block">
-                Usuario: <span id="auth-message-desktop" class="font-medium">Cargando...</span>
+            <!-- Estado de Usuario que simula el "Usuario: Cargando..." original -->
+            <div id="user-status" class="text-sm text-gray-500 flex items-center space-x-2">
+                <span id="auth-icon" class="w-2 h-2 rounded-full bg-gray-400"></span>
+                <span id="auth-message" class="font-medium">Usuario: Cargando...</span>
             </div>
         </div>
 
@@ -159,11 +162,6 @@
     <!-- Contenido Principal -->
     <main class="main-content container-content">
         
-        <!-- Estado de Autenticación para Móvil -->
-        <div id="auth-status-mobile" class="sm:hidden mb-4 p-3 bg-blue-100 text-blue-800 rounded-lg text-sm auth-status-container">
-            Estado de la Conexión: <span id="auth-message-mobile" class="font-medium">Conectando...</span>
-        </div>
-
         <!-- Pestaña 1: Registro de Asistencia -->
         <div id="tab-registro" class="tab-content active">
             <div class="flex flex-wrap -mx-4">
@@ -187,9 +185,9 @@
                             Asistencia Diaria
                         </h2>
 
-                        <!-- Muestra el ID de usuario (visible solo si no hay error de conexión) -->
+                        <!-- Muestra el ID de usuario si hay éxito o error, pero oculto por defecto -->
                         <div id="user-info" class="mb-6 p-3 bg-gray-50 rounded-lg shadow-inner border border-gray-200 hidden">
-                            <p class="text-sm font-medium text-gray-600 mb-1">Tu ID de Usuario:</p>
+                            <p class="text-sm font-medium text-gray-600 mb-1">Tu ID de Usuario (Para registro privado):</p>
                             <code id="user-id" class="block bg-white p-2 text-xs text-gray-800 break-all rounded border border-gray-200">Cargando...</code>
                         </div>
 
@@ -211,6 +209,7 @@
                                 Registrar Ahora
                             </button>
                             
+                            <!-- Mensaje de confirmación/error de registro -->
                             <div id="registro-message" class="mt-4 p-3 text-sm rounded-md hidden" role="alert"></div>
                         </form>
                     </div>
@@ -282,10 +281,9 @@
         const loadingOverlay = document.getElementById('loading-overlay');
         const loadingText = document.getElementById('loading-text');
         
-        // Mensajes de Auth
-        const authMessageMobile = document.getElementById('auth-message-mobile');
-        const authStatusMobile = document.getElementById('auth-status-mobile');
-        const authMessageDesktop = document.getElementById('auth-message-desktop');
+        // Mensajes de Auth en el Header
+        const authMessage = document.getElementById('auth-message');
+        const authIcon = document.getElementById('auth-icon');
 
         const userIdCode = document.getElementById('user-id');
         const userInfoContainer = document.getElementById('user-info');
@@ -306,29 +304,32 @@
 
         // --- Inicialización de Firebase y Autenticación ---
         async function initializeFirebase() {
-            loadingOverlay.classList.remove('hidden');
-
+            // Si la configuración no es válida, no inicializamos Firebase y solo mostramos el error
             if (!isConfigValid) {
                 const error = new Error("Configuración de Firebase no encontrada.");
                 console.error("Error fatal al inicializar Firebase:", error);
+                // Llama a handleAuthError para simular el fallo de conexión
                 handleAuthError(error, true);
+                loadingOverlay.classList.add('hidden');
                 return; 
             }
+            
+            loadingOverlay.classList.remove('hidden');
 
             try {
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app); 
                 
-                updateAuthMessage('Autenticando...');
+                updateAuthStatus('connecting', 'Usuario: Conectando...');
                 
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         userId = user.uid;
                         userIdCode.textContent = userId;
-                        userInfoContainer.classList.remove('hidden'); // Mostrar ID si hay éxito
+                        userInfoContainer.classList.remove('hidden'); // Mostrar ID
                         
-                        updateAuthMessage('Conexión exitosa a Firebase (Usuario autenticado)', 'success');
+                        updateAuthStatus('success', 'Usuario: Conectado');
                         submitBtn.disabled = false;
                         isAuthReady = true;
                         loadingOverlay.classList.add('hidden');
@@ -336,11 +337,13 @@
                         setupRealtimeListener();
                     } else {
                         if (isAuthReady === false) { 
+                            // Esto solo se ejecuta si fallaron todos los reintentos
                             handleAuthError(new Error("No se pudo iniciar sesión después de varios intentos."));
                         }
                     }
                 });
 
+                // Intento inicial de autenticación
                 await attemptAuth(initialAuthToken, retryCount);
 
             } catch (error) {
@@ -349,20 +352,17 @@
             }
         }
         
-        // Función para actualizar los mensajes de conexión en móvil y escritorio
-        function updateAuthMessage(text, status = 'connecting') {
-            authMessageMobile.textContent = text;
-            authMessageDesktop.textContent = text;
-
-            authStatusMobile.classList.remove('bg-blue-100', 'bg-red-100', 'bg-green-100');
-            authStatusMobile.classList.remove('text-blue-800', 'text-red-800', 'text-green-800');
+        // Función para actualizar el estado de autenticación en el header
+        function updateAuthStatus(status, text) {
+            authIcon.classList.remove('bg-gray-400', 'bg-red-500', 'bg-green-500');
+            authMessage.textContent = text;
 
             if (status === 'connecting') {
-                authStatusMobile.classList.add('bg-blue-100', 'text-blue-800');
+                authIcon.classList.add('bg-gray-400', 'animate-pulse');
             } else if (status === 'error') {
-                authStatusMobile.classList.add('bg-red-100', 'text-red-800');
+                authIcon.classList.add('bg-red-500');
             } else if (status === 'success') {
-                authStatusMobile.classList.add('bg-green-100', 'text-green-800');
+                authIcon.classList.add('bg-green-500');
             }
         }
 
@@ -377,6 +377,7 @@
                     await signInAnonymously(auth);
                 }
             } catch (error) {
+                // Solo loguear, el listener onAuthStateChanged maneja el estado final
                 console.error(`Error de autenticación en el intento ${attempt + 1}:`, error);
                 
                 if (attempt < MAX_RETRIES - 1) {
@@ -387,6 +388,7 @@
                     await new Promise(resolve => setTimeout(resolve, delay));
                     await attemptAuth(token, retryCount); 
                 } else {
+                    // Si falla el último intento, se fuerza el estado de error
                     handleAuthError(error);
                 }
             }
@@ -396,20 +398,27 @@
         function handleAuthError(error, isConfigMissing = false) {
             userId = crypto.randomUUID(); 
             userIdCode.textContent = `ID Temporal: ${userId}`;
-            userInfoContainer.classList.remove('hidden'); // Mostrar el ID temporal en caso de error
+            userInfoContainer.classList.remove('hidden'); // Mostrar el ID temporal
 
-            let errorMessage = `ERROR: No se pudo iniciar sesión. ${error.message}`;
+            let errorMessage = `Usuario: ERROR de conexión.`;
+            let detailedError = `Error: ${error.message}`;
+
             if (isConfigMissing) {
-                errorMessage = `ERROR: Configuración de Firebase no encontrada. El registro NO se guardará.`;
+                errorMessage = `Usuario: ERROR de Configuración`;
+                detailedError = `ERROR: Configuración de Firebase no encontrada. El registro NO se guardará.`;
             }
             
-            updateAuthMessage(errorMessage, 'error');
+            updateAuthStatus('error', errorMessage);
             
             submitBtn.disabled = true;
             isAuthReady = true; 
             loadingOverlay.classList.add('hidden');
             
-            historialLista.innerHTML = `<p class="text-center text-red-500 mt-4">Error de conexión. El historial no está disponible.</p>`;
+            // Mostrar mensaje de error detallado en el historial
+            historialLista.innerHTML = `<div class="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg shadow-sm">
+                                            <p class="font-bold">Error de Conexión</p>
+                                            <p class="text-sm">${detailedError}</p>
+                                        </div>`;
             noRegistros.classList.add('hidden');
         }
 
@@ -420,9 +429,7 @@
 
             historialLoading.classList.remove('hidden');
             
-            // Ruta de la colección privada: /artifacts/{appId}/users/{userId}/registros
             const registrosRef = collection(db, `artifacts/${appId}/users/${userId}/registros`);
-
             const q = query(registrosRef); 
             
             onSnapshot(q, (snapshot) => {
@@ -436,7 +443,6 @@
                     });
                 });
                 
-                // Ordenar los registros por timestamp (más reciente primero)
                 registros.sort((a, b) => {
                     if (a.timestamp && b.timestamp) {
                         return b.timestamp.toMillis() - a.timestamp.toMillis();
@@ -493,13 +499,9 @@
         registroForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            if (!isConfigValid) {
-                showMessage("ERROR: La aplicación no está configurada. El registro no se puede guardar.", 'bg-red-100', 'text-red-800');
-                return;
-            }
-
-            if (!isAuthReady || !userId) {
-                showMessage("Por favor, espera a que la conexión con Firebase se establezca.", 'bg-yellow-100', 'text-yellow-800');
+            if (!isConfigValid || !isAuthReady || !userId) {
+                // Muestra un mensaje de error si no se pudo conectar o si la configuración es inválida
+                showMessage("ERROR: La aplicación no está conectada o configurada. El registro no se puede guardar.", 'bg-red-100', 'text-red-800');
                 return;
             }
 
@@ -554,15 +556,11 @@
             const tabContents = document.querySelectorAll('.tab-content');
 
             function activateTab(targetId) {
-                // Desactivar todos los contenidos
                 tabContents.forEach(content => content.classList.remove('active'));
-                // Activar el contenido objetivo
                 document.getElementById(targetId).classList.add('active');
 
-                // Desactivar todos los botones (escritorio y móvil)
                 document.querySelectorAll('.tab-button, .nav-item').forEach(btn => btn.classList.remove('active'));
 
-                // Activar los botones correspondientes al targetId
                 document.querySelectorAll(`[data-tab="${targetId}"]`).forEach(btn => btn.classList.add('active'));
             }
 
@@ -594,7 +592,6 @@
     </script>
 </body>
 </html>
-
 
 
 
