@@ -1,427 +1,115 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LPA - Asistencia Pádel</title>
-
-  <!-- PWA / manifest -->
-  <link rel="manifest" href="/manifest.json" />
-  <meta name="theme-color" content="#ffffff" />
-  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-
-  <!-- Tailwind CSS -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Registro de Asistencia - LPA</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
-    rel="stylesheet"
-  />
-
   <style>
     body {
-      font-family: "Inter", sans-serif;
-      background-color: #f7f7f7;
-      margin: 0;
-      padding: 0;
-      min-height: 100vh;
-    }
-    .header-main {
-      border-bottom: 1px solid #e5e7eb;
-    }
-    .container-content {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 1.5rem;
-    }
-    .tab-button {
-      padding: 0.75rem 1.25rem;
-      cursor: pointer;
-      border-bottom: 3px solid transparent;
-      transition: border-color 0.2s, color 0.2s;
-      font-weight: 600;
-    }
-    .tab-button.active {
-      color: #1d4ed8;
-      border-bottom-color: #1d4ed8;
-    }
-    .tab-content {
-      display: none;
-      padding-top: 1.5rem;
-    }
-    .tab-content.active {
-      display: block;
-    }
-    .card {
-      background-color: white;
-      border-radius: 0.5rem;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-      padding: 1.5rem;
-    }
-    @media (max-width: 640px) {
-      .tabs-menu {
-        display: none;
-      }
-      .navbar {
-        display: flex;
-      }
-      .container-content {
-        padding-left: 0;
-        padding-right: 0;
-      }
-      .main-content {
-        padding-bottom: 90px;
-        padding-top: 56px;
-      }
-      .header-main {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        z-index: 10;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-      }
-      .tab-content {
-        padding: 1rem;
-      }
-      .auth-status-container {
-        display: none;
-      }
-    }
-    .navbar {
-      display: none;
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background-color: white;
-      border-top: 1px solid #e5e7eb;
-      z-index: 20;
-      box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
-      justify-content: space-around;
-      height: 60px;
-    }
-    .nav-item {
-      color: #6b7280;
-      transition: color 0.2s;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      flex-grow: 1;
-    }
-    .nav-item.active {
-      color: #1d4ed8;
-    }
-    .loading-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(255, 255, 255, 0.95);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 100;
-      flex-direction: column;
-      text-align: center;
+      background-color: #fef2f2; /* rojo muy claro */
+      font-family: sans-serif;
     }
   </style>
 </head>
-<body>
-  <!-- Overlay de carga -->
-  <div id="loading-overlay" class="loading-overlay hidden">
-    <div
-      class="animate-spin rounded-full h-12 w-12 border-4 border-b-transparent border-blue-600 mb-4"
-    ></div>
-    <p class="text-gray-700 font-semibold" id="loading-text">
-      Cargando aplicación...
-    </p>
-  </div>
+<body class="min-h-screen flex flex-col items-center justify-start p-4">
 
-  <header class="header-main bg-white">
-    <div class="container-content flex justify-between items-center py-3">
-      <div class="flex items-center space-x-4">
-        <h1 class="text-xl font-bold text-red-600">LPA – Asistencia</h1>
-      </div>
-      <div id="user-status" class="text-sm text-gray-500 flex items-center space-x-2">
-        <span id="auth-icon" class="w-2 h-2 rounded-full bg-gray-400"></span>
-        <span id="auth-message" class="font-medium">Usuario: Cargando...</span>
-      </div>
-    </div>
-    <nav class="container-content tabs-menu hidden sm:flex border-b border-gray-200">
-      <button id="tab-registro-btn-desk" class="tab-button active" data-tab="tab-registro">
-        Registro
-      </button>
-      <button id="tab-historial-btn-desk" class="tab-button" data-tab="tab-historial">
-        Historial
-      </button>
-      <button id="tab-gestion-btn-desk" class="tab-button" data-tab="tab-gestion">
-        Gestión
-      </button>
-    </nav>
+  <header class="w-full max-w-xl mb-6">
+    <h1 class="text-2xl font-bold text-center text-red-600">Registro de Asistencia - LPA</h1>
   </header>
 
-  <main class="main-content container-content">
-    <!-- TAB Registro -->
-    <div id="tab-registro" class="tab-content active">
-      <div class="flex flex-wrap -mx-4">
-        <div class="w-full lg:w-1/3 px-4 mb-6 lg:mb-0">
-          <div class="card h-full">
-            <h2 class="text-lg font-bold text-gray-800 mb-3">Instrucciones</h2>
-            <p class="text-sm text-gray-600">
-              Selecciona el jugador, el tipo de registro (entrada/salida) y presiona “Registrar”.
-            </p>
-          </div>
-        </div>
-        <div class="w-full lg:w-2/3 px-4">
-          <div class="card">
-            <h2 class="text-lg font-bold text-red-600 mb-6 flex items-center">
-              <svg
-                class="w-5 h-5 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2m-9 0V3h4v2m-4 0h4m-4 0H7m0 0v2"
-                ></path>
-              </svg>
-              Asistencia
-            </h2>
-            <div id="user-info" class="mb-6 p-3 bg-gray-50 rounded-lg shadow-inner border border-gray-200 hidden">
-              <p class="text-sm font-medium text-gray-600 mb-1">ID Usuario:</p>
-              <code
-                id="user-id"
-                class="block bg-white p-2 text-xs text-gray-800 break-all rounded border border-gray-200"
-                >Cargando...</code
-              >
-            </div>
-            <form id="registro-form" class="space-y-4">
-              <div>
-                <label for="selector-jugador" class="block text-sm font-medium text-gray-700">Jugador</label>
-                <select
-                  id="selector-jugador"
-                  required
-                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition duration-150 bg-white"
-                >
-                  <option value="">Selecciona jugador</option>
-                </select>
-              </div>
-              <div>
-                <label for="tipo-registro" class="block text-sm font-medium text-gray-700">Tipo de Registro</label>
-                <select
-                  id="tipo-registro"
-                  required
-                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition duration-150 bg-white"
-                >
-                  <option value="">Selecciona...</option>
-                  <option value="entrada">Entrada</option>
-                  <option value="salida">Salida</option>
-                </select>
-              </div>
-              <button
-                type="submit"
-                id="submit-btn"
-                class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-200 disabled:opacity-50"
-                disabled
-              >
-                Registrar
-              </button>
-              <div id="registro-message" class="mt-4 p-3 text-sm rounded-md hidden" role="alert"></div>
-            </form>
-          </div>
-        </div>
+  <main class="w-full max-w-xl bg-white p-6 rounded shadow">
+    <form id="attendance-form" class="space-y-4">
+      <div>
+        <label for="input-nombre" class="block text-gray-700 font-medium">Nombre del Jugador</label>
+        <input type="text" id="input-nombre" required class="w-full px-3 py-2 border border-gray-300 rounded" />
       </div>
-    </div>
-
-    <!-- TAB Historial / Reportes -->
-    <div id="tab-historial" class="tab-content">
-      <h2 class="text-xl font-semibold mb-4 text-gray-700">Historial & Reportes</h2>
-      <div class="mb-4 flex space-x-2">
-        <button
-          id="btn-descargar-todos"
-          class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-        >
-          Descargar Todos
-        </button>
-        <select id="selector-reporte-jugador" class="px-3 py-2 border rounded">
-          <option value="">Todos los jugadores</option>
+      <div>
+        <label for="select-tipo" class="block text-gray-700 font-medium">Tipo de Registro</label>
+        <select id="select-tipo" required class="w-full px-3 py-2 border border-gray-300 rounded">
+          <option value="">Selecciona...</option>
+          <option value="Entrada">Entrada</option>
+          <option value="Salida">Salida</option>
         </select>
-        <button
-          id="btn-descargar-por-jugador"
-          class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
-        >
-          Descargar Jugador
-        </button>
       </div>
-      <div id="historial-loading" class="text-center p-4 text-gray-500 hidden">
-        Cargando historial...
-      </div>
-      <div id="historial-lista" class="space-y-3">
-        <p class="text-center text-gray-500 mt-4" id="no-registros">
-          No hay registros aún.
-        </p>
-      </div>
+      <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded">Registrar Asistencia</button>
+    </form>
+
+    <div class="mt-6">
+      <h2 class="text-lg font-semibold text-gray-800 mb-2">Registros actuales</h2>
+      <table class="w-full text-sm text-left text-gray-700 border" id="records-table">
+        <thead class="bg-red-100">
+          <tr>
+            <th class="p-2 border">Nombre</th>
+            <th class="p-2 border">Tipo</th>
+            <th class="p-2 border">Fecha y Hora</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
     </div>
 
-    <!-- TAB Gestión (Jugadores / Horarios) -->
-    <div id="tab-gestion" class="tab-content">
-      <h2 class="text-xl font-semibold mb-4 text-gray-700">Gestión de Academia</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="card">
-          <h3 class="font-semibold mb-2">Agregar Jugador</h3>
-          <form id="form-agregar-jugador" class="space-y-2">
-            <div>
-              <label for="nombre-jugador-nuevo" class="block text-sm font-medium text-gray-700">Nombre</label>
-              <input
-                type="text"
-                id="nombre-jugador-nuevo"
-                required
-                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label for="apellido-jugador-nuevo" class="block text-sm font-medium text-gray-700">Apellido</label>
-              <input
-                type="text"
-                id="apellido-jugador-nuevo"
-                required
-                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <button
-              type="submit"
-              class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-            >
-              Agregar Jugador
-            </button>
-          </form>
-        </div>
-        <div class="card">
-          <h3 class="font-semibold mb-2">Agregar Horario / Grupo</h3>
-          <form id="form-agregar-horario" class="space-y-2">
-            <div>
-              <label for="hora-inicio-nuevo" class="block text-sm font-medium text-gray-700">Hora Inicio</label>
-              <input
-                type="time"
-                id="hora-inicio-nuevo"
-                required
-                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label for="hora-fin-nuevo" class="block text-sm font-medium text-gray-700">Hora Fin</label>
-              <input
-                type="time"
-                id="hora-fin-nuevo"
-                required
-                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label for="grupo-nuevo" class="block text-sm font-medium text-gray-700">Grupo (opcional)</label>
-              <input
-                type="text"
-                id="grupo-nuevo"
-                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <button
-              type="submit"
-              class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
-            >
-              Agregar Horario
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
+    <button id="export-btn" class="mt-4 w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded">Exportar a CSV</button>
   </main>
 
-  <nav class="navbar">
-    <button id="tab-registro-btn-mobile" class="nav-item active" data-tab="tab-registro">
-      <svg
-        class="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2m-9 0V3h4v2m-4 0h4m-4 0H7m0 0v2"
-        ></path>
-      </svg>
-      <span class="text-xs">Registro</span>
-    </button>
-    <button id="tab-historial-btn-mobile" class="nav-item" data-tab="tab-historial">
-      <svg
-        class="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-        ></path>
-      </svg>
-      <span class="text-xs">Historial</span>
-    </button>
-    <button id="tab-gestion-btn-mobile" class="nav-item" data-tab="tab-gestion">
-      <svg
-        class="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37a1.724 1.724 0 002.572-1.065z"
-        ></path>
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-        ></path>
-      </svg>
-      <span class="text-xs">Gestión</span>
-    </button>
-  </nav>
+  <script>
+    const form = document.getElementById('attendance-form');
+    const tableBody = document.querySelector('#records-table tbody');
+    const exportBtn = document.getElementById('export-btn');
+    const registros = [];
 
-  <!-- Aquí cargas tu script principal -->
-    <script>
-  window.__firebase_config = {
-    apiKey: "AIzaSyCR423gNHR_Wb5kE65bSum_R542IJ3cN6I",
-    authDomain: "academia-lpa.firebaseapp.com",
-    projectId: "academia-lpa",
-    storageBucket: "academia-lpa.firebasestorage.app",
-    messagingSenderId: "311766682135",
-    appId: "1:311766682135:web:c76ca5330cf30132076a52",
-    measurementId: "G-194YH0TR6E"
-  };
-  window.__app_id = "academia-lpa";
-</script>
-  <script type="module" src="/src/app.js"></script>
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const nombre = document.getElementById('input-nombre').value.trim();
+      const tipo = document.getElementById('select-tipo').value;
+      const fechaHora = new Date().toLocaleString();
+
+      if (!nombre || !tipo) return;
+
+      const registro = { nombre, tipo, fechaHora };
+      registros.push(registro);
+      agregarFilaTabla(registro);
+
+      form.reset();
+    });
+
+    function agregarFilaTabla(registro) {
+      const fila = document.createElement('tr');
+      fila.innerHTML = `
+        <td class="p-2 border">${registro.nombre}</td>
+        <td class="p-2 border">${registro.tipo}</td>
+        <td class="p-2 border">${registro.fechaHora}</td>
+      `;
+      tableBody.appendChild(fila);
+    }
+
+    exportBtn.addEventListener('click', () => {
+      if (registros.length === 0) {
+        alert("No hay registros para exportar.");
+        return;
+      }
+
+      const encabezados = ["Nombre", "Tipo", "Fecha y Hora"];
+      const filas = registros.map(reg => [reg.nombre, reg.tipo, reg.fechaHora]);
+      const contenidoCSV = [encabezados, ...filas]
+        .map(fila => fila.map(valor => `"${valor}"`).join(','))
+        .join('\n');
+
+      const blob = new Blob([contenidoCSV], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "asistencia_LPA.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+  </script>
+
 </body>
 </html>
+
+
 
 
 
