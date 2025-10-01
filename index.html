@@ -2,99 +2,141 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Academia LPA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LPA – Asistencia</title>
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#ef4444">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="LPA Asistencia">
+  <link rel="apple-touch-icon" href="app-icon.png.jpg">
 </head>
-<body class="bg-gray-100">
-
-  <!-- Modal de Login -->
-  <div id="login-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-    <div class="bg-white p-6 rounded shadow w-80">
-      <h2 class="text-lg font-bold mb-4">Iniciar sesión</h2>
+<body class="bg-red-50">
+  <!-- MODAL LOGIN -->
+  <div id="login-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+    <div class="bg-white p-6 rounded shadow-lg w-80">
+      <h2 class="text-xl font-bold text-red-600 mb-4">Iniciar Sesión</h2>
       <form id="login-form" class="space-y-4">
-        <input id="login-email" type="email" placeholder="Correo" class="w-full border p-2 rounded"/>
-        <input id="login-password" type="password" placeholder="Contraseña" class="w-full border p-2 rounded"/>
-        <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded">Entrar</button>
+        <div>
+          <label class="block text-gray-700">Correo</label>
+          <input type="email" id="login-email" required class="w-full px-3 py-2 border border-gray-300 rounded">
+        </div>
+        <div>
+          <label class="block text-gray-700">Contraseña</label>
+          <input type="password" id="login-password" required class="w-full px-3 py-2 border border-gray-300 rounded">
+        </div>
+        <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded">Entrar</button>
       </form>
-      <p id="login-error" class="text-red-500 text-sm mt-2 hidden">Credenciales inválidas</p>
     </div>
   </div>
 
-  <!-- Contenido de la App -->
-  <div id="app-content" class="hidden p-6 max-w-4xl mx-auto">
-    <div class="flex justify-between items-center mb-4">
-      <h1 class="text-2xl font-bold">📋 Academia LPA</h1>
-      <button id="logout-btn" class="bg-red-600 text-white px-3 py-1 rounded">Salir</button>
+  <!-- APP -->
+  <div id="app" class="max-w-3xl mx-auto p-4 hidden">
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-3xl font-bold text-red-600">LPA – Asistencia</h1>
+      <button id="logout-btn" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded">Salir</button>
     </div>
 
-    <!-- Pestañas -->
-    <div class="mb-4">
-      <button onclick="mostrarTab('jugadores')" class="px-4 py-2 bg-gray-200 rounded">Jugadores</button>
-      <button onclick="mostrarTab('asistencia')" class="px-4 py-2 bg-gray-200 rounded">Asistencia</button>
+    <!-- Tabs -->
+    <div class="flex space-x-2 mb-4">
+      <button class="tab-button active bg-red-500 text-white px-4 py-2 rounded" data-tab="asistencia-tab">Registro de Asistencia</button>
+      <button class="tab-button bg-gray-200 px-4 py-2 rounded" data-tab="jugadores-tab">Jugadores</button>
     </div>
 
-    <!-- Tab Jugadores -->
-    <div id="tab-jugadores" class="tab">
-      <h2 class="text-xl font-bold mb-2">Gestión de Jugadores</h2>
-      <form id="jugador-form" class="mb-4 space-x-2">
-        <input id="input-nombre-jugador" type="text" placeholder="Nombre" class="border p-1 rounded"/>
-        <input id="input-apellido-jugador" type="text" placeholder="Apellido" class="border p-1 rounded"/>
-        <input id="input-horario" type="text" placeholder="Horario" class="border p-1 rounded"/>
-        <button type="submit" class="bg-green-600 text-white px-2 py-1 rounded">Agregar</button>
-      </form>
-      <table class="w-full border bg-white">
-        <thead>
-          <tr>
-            <th class="border px-2 py-1">Nombre</th>
-            <th class="border px-2 py-1">Apellido</th>
-            <th class="border px-2 py-1">Horario</th>
-            <th class="border px-2 py-1">Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="table-body-jugadores"></tbody>
-      </table>
+    <!-- TAB 1: Asistencia -->
+    <div id="asistencia-tab" class="tab-content active">
+      <div class="bg-white p-4 rounded shadow mb-4">
+        <form id="attendance-form" class="space-y-4">
+          <div>
+            <label class="block text-gray-700">Jugador</label>
+            <select id="select-nombre" required class="w-full px-3 py-2 border border-gray-300 rounded">
+              <option value="">Selecciona un jugador...</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-gray-700">Estado</label>
+            <select id="select-tipo" required class="w-full px-3 py-2 border border-gray-300 rounded">
+              <option value="">Selecciona...</option>
+              <option value="A tiempo">A tiempo</option>
+              <option value="Tarde">Tarde</option>
+              <option value="Ausente">Ausente</option>
+            </select>
+          </div>
+          <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded">Registrar</button>
+        </form>
+      </div>
+
+      <div class="bg-white p-4 rounded shadow mb-4">
+        <div class="flex justify-between items-center mb-2">
+          <h2 class="text-lg font-semibold text-gray-800">Registros actuales</h2>
+          <button id="export-csv" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm">Exportar CSV</button>
+        </div>
+        <table id="records-table" class="w-full text-sm border-collapse">
+          <thead>
+            <tr class="bg-red-100">
+              <th class="border px-2 py-1">Nombre</th>
+              <th class="border px-2 py-1">Horario</th>
+              <th class="border px-2 py-1">Tipo</th>
+              <th class="border px-2 py-1">Fecha y Hora</th>
+              <th class="border px-2 py-1 only-desktop">Acciones</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
 
-    <!-- Tab Asistencia -->
-    <div id="tab-asistencia" class="tab hidden">
-      <h2 class="text-xl font-bold mb-2">Registro de Asistencia</h2>
-      <form id="attendance-form" class="mb-4 space-x-2">
-        <select id="select-nombre" class="border p-1 rounded"></select>
-        <select id="select-tipo" class="border p-1 rounded">
-          <option value="Clase">Clase</option>
-          <option value="Torneo">Torneo</option>
-        </select>
-        <button type="submit" class="bg-green-600 text-white px-2 py-1 rounded">Registrar</button>
-      </form>
-      <button id="export-csv" class="mb-2 bg-blue-600 text-white px-3 py-1 rounded">⬇️ Exportar CSV</button>
-      <table class="w-full border bg-white" id="records-table">
-        <thead>
-          <tr>
-            <th class="border px-2 py-1">Nombre</th>
-            <th class="border px-2 py-1">Horario</th>
-            <th class="border px-2 py-1">Tipo</th>
-            <th class="border px-2 py-1">Fecha</th>
-            <th class="border px-2 py-1">Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="table-body-asistencia"></tbody>
-      </table>
+    <!-- TAB 2: Jugadores -->
+    <div id="jugadores-tab" class="tab-content hidden">
+      <div class="bg-white p-4 rounded shadow mb-4">
+        <form id="jugador-form" class="space-y-4">
+          <div>
+            <label class="block text-gray-700">Nombre</label>
+            <input type="text" id="input-nombre-jugador" required class="w-full px-3 py-2 border border-gray-300 rounded" />
+          </div>
+          <div>
+            <label class="block text-gray-700">Apellido</label>
+            <input type="text" id="input-apellido-jugador" required class="w-full px-3 py-2 border border-gray-300 rounded" />
+          </div>
+          <div>
+            <label class="block text-gray-700">Horario</label>
+            <input type="text" id="input-horario" required class="w-full px-3 py-2 border border-gray-300 rounded" placeholder="Ej. 17:00 - 19:00" />
+          </div>
+          <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded">Registrar Jugador</button>
+        </form>
+      </div>
+
+      <div class="bg-white p-4 rounded shadow mb-4">
+        <h2 class="text-lg font-semibold text-gray-800 mb-2">Jugadores Registrados</h2>
+        <table id="jugadores-table" class="w-full text-sm border-collapse">
+          <thead>
+            <tr class="bg-red-100">
+              <th class="border px-2 py-1">Nombre</th>
+              <th class="border px-2 py-1">Apellido</th>
+              <th class="border px-2 py-1">Horario</th>
+              <th class="border px-2 py-1">Acciones</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
-  <!-- Firebase y lógica -->
+  <!-- Firebase -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-    // Configuración Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCR423gNHR_Wb5kE65bSum_R542IJ3cN6I",
       authDomain: "academia-lpa.firebaseapp.com",
       projectId: "academia-lpa",
-      storageBucket: "academia-lpa.appspot.com",
+      storageBucket: "academia-lpa.firebasestorage.app",
       messagingSenderId: "311766682135",
       appId: "1:311766682135:web:c76ca5330cf30132076a52",
       measurementId: "G-194YH0TR6E"
@@ -104,59 +146,54 @@
     const db = getFirestore(app);
     const auth = getAuth(app);
 
-    // Elementos
+    // -------- LOGIN --------
     const loginModal = document.getElementById("login-modal");
+    const appDiv = document.getElementById("app");
     const loginForm = document.getElementById("login-form");
-    const loginError = document.getElementById("login-error");
-    const appContent = document.getElementById("app-content");
     const logoutBtn = document.getElementById("logout-btn");
 
-    const tableBodyJugadores = document.getElementById("table-body-jugadores");
-    const tableBodyAsistencia = document.getElementById("table-body-asistencia");
-    const selectNombre = document.getElementById("select-nombre");
-
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-    // Tabs
-    function mostrarTab(tab) {
-      document.querySelectorAll(".tab").forEach(t => t.classList.add("hidden"));
-      document.getElementById("tab-" + tab).classList.remove("hidden");
-    }
-    window.mostrarTab = mostrarTab;
-
-    // Login
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const email = document.getElementById("login-email").value;
       const password = document.getElementById("login-password").value;
+
       try {
         await signInWithEmailAndPassword(auth, email, password);
-        loginError.classList.add("hidden");
-      } catch {
-        loginError.classList.remove("hidden");
+      } catch (error) {
+        alert("Error de inicio de sesión: " + error.message);
       }
     });
 
-    logoutBtn.addEventListener("click", () => {
-      signOut(auth);
+    logoutBtn.addEventListener("click", async () => {
+      await signOut(auth);
     });
 
-    // Control sesión
     onAuthStateChanged(auth, (user) => {
-      if (user && user.email === "ligapadelatlantico@gmail.com") {
-        loginModal.style.display = "none";
-        appContent.classList.remove("hidden");
-        cargarJugadores();
-        cargarAsistencia();
+      if (user) {
+        loginModal.classList.add("hidden");
+        appDiv.classList.remove("hidden");
       } else {
-        loginModal.style.display = "flex";
-        appContent.classList.add("hidden");
+        appDiv.classList.add("hidden");
+        loginModal.classList.remove("hidden");
       }
     });
 
-    // =========================
-    // JUGADORES
-    // =========================
+    // -------- UI TABS --------
+    document.querySelectorAll(".tab-button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-button").forEach(b => b.classList.remove("bg-red-500","text-white"));
+        btn.classList.add("bg-red-500","text-white");
+        document.querySelectorAll(".tab-content").forEach(c => c.classList.add("hidden"));
+        document.getElementById(btn.dataset.tab).classList.remove("hidden");
+      });
+    });
+
+    const selectNombre = document.getElementById("select-nombre");
+    const tableBodyAsistencia = document.querySelector("#records-table tbody");
+    const tableBodyJugadores = document.querySelector("#jugadores-table tbody");
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    // -------- JUGADORES --------
     async function cargarJugadores() {
       tableBodyJugadores.innerHTML = "";
       selectNombre.innerHTML = '<option value="">Selecciona un jugador...</option>';
@@ -201,9 +238,7 @@
       cargarJugadores();
     });
 
-    // =========================
-    // ASISTENCIA
-    // =========================
+    // -------- ASISTENCIA --------
     async function cargarAsistencia() {
       tableBodyAsistencia.innerHTML = "";
       const querySnapshot = await getDocs(collection(db, "asistencia"));
@@ -249,9 +284,7 @@
       cargarAsistencia();
     });
 
-    // =========================
-    // EXPORTAR CSV
-    // =========================
+    // -------- EXPORTAR CSV --------
     document.getElementById("export-csv").addEventListener("click", () => {
       const rows = [["Nombre", "Horario", "Tipo", "Fecha"]];
       document.querySelectorAll("#records-table tbody tr").forEach(tr => {
@@ -279,9 +312,27 @@
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     });
+
+    // -------- Inicial --------
+    cargarJugadores();
+    cargarAsistencia();
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("service-worker.js");
+    }
   </script>
+
+  <style>
+    @media (max-width: 768px) {
+      .only-desktop {
+        display: none;
+      }
+    }
+  </style>
 </body>
 </html>
+
+
 
 
 
