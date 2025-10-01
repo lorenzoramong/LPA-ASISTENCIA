@@ -59,6 +59,7 @@
               <th class="border px-2 py-1">Horario</th>
               <th class="border px-2 py-1">Tipo</th>
               <th class="border px-2 py-1">Fecha y Hora</th>
+              <th class="border px-2 py-1 only-desktop">Acciones</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -108,7 +109,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // Config Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCR423gNHR_Wb5kE65bSum_R542IJ3cN6I",
       authDomain: "academia-lpa.firebaseapp.com",
@@ -132,10 +132,11 @@
       });
     });
 
-    // DOM
     const selectNombre = document.getElementById("select-nombre");
     const tableBodyAsistencia = document.querySelector("#records-table tbody");
     const tableBodyJugadores = document.querySelector("#jugadores-table tbody");
+
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
     // JUGADORES
     async function cargarJugadores() {
@@ -147,7 +148,6 @@
         const jugador = d.data();
         const id = d.id;
 
-        // fila
         const fila = document.createElement("tr");
         fila.innerHTML = `
           <td class="border px-2 py-1">${jugador.nombre}</td>
@@ -159,13 +159,11 @@
         `;
         tableBodyJugadores.appendChild(fila);
 
-        // opción select
         selectNombre.innerHTML += `<option value="${jugador.nombre} ${jugador.apellido}" data-horario="${jugador.horario}">
           ${jugador.nombre} ${jugador.apellido} - ${jugador.horario}
         </option>`;
       });
 
-      // eventos eliminar
       document.querySelectorAll(".eliminar").forEach(btn => {
         btn.addEventListener("click", async e => {
           const id = e.target.dataset.id;
@@ -191,6 +189,7 @@
       const querySnapshot = await getDocs(collection(db, "asistencia"));
       querySnapshot.forEach(d => {
         const r = d.data();
+        const id = d.id;
         const fecha = r.fechaHora?.seconds ? new Date(r.fechaHora.seconds * 1000) : new Date();
         const fila = document.createElement("tr");
         fila.innerHTML = `
@@ -198,9 +197,22 @@
           <td class="border px-2 py-1">${r.horario}</td>
           <td class="border px-2 py-1">${r.tipo}</td>
           <td class="border px-2 py-1">${fecha.toLocaleString()}</td>
+          ${!isMobile ? `<td class="border px-2 py-1 text-center"><button data-id="${id}" class="eliminar-asistencia bg-red-500 text-white px-2 py-1 rounded text-xs">Eliminar</button></td>` : ""}
         `;
         tableBodyAsistencia.appendChild(fila);
       });
+
+      if (!isMobile) {
+        document.querySelectorAll(".eliminar-asistencia").forEach(btn => {
+          btn.addEventListener("click", async e => {
+            const id = e.target.dataset.id;
+            if (confirm("¿Seguro que quieres eliminar este registro?")) {
+              await deleteDoc(doc(db, "asistencia", id));
+              cargarAsistencia();
+            }
+          });
+        });
+      }
     }
 
     document.getElementById("attendance-form").addEventListener("submit", async e => {
@@ -217,52 +229,54 @@
       cargarAsistencia();
     });
 
-// Exportar CSV (compatible con Excel: BOM + ; separator + CRLF + escape de comillas)
-document.getElementById("export-csv").addEventListener("click", () => {
-  // Armamos las filas desde la tabla (encabezado + datos)
-  const rows = [["Nombre", "Horario", "Tipo", "Fecha"]];
-  document.querySelectorAll("#records-table tbody tr").forEach(tr => {
-    const cols = [...tr.querySelectorAll("td")].map(td => td.innerText.trim());
-    rows.push(cols);
-  });
+    // EXPORTAR CSV (funciona en PC y móvil)
+    document.getElementById("export-csv").addEventListener("click", () => {
+      const rows = [["Nombre", "Horario", "Tipo", "Fecha"]];
+      document.querySelectorAll("#records-table tbody tr").forEach(tr => {
+        const cols = [...tr.querySelectorAll("td")].map(td => td.innerText.trim());
+        rows.push(cols.slice(0, 4)); // solo primeras 4 columnas
+      });
 
-  const SEP = ';';
+      const SEP = ';';
+      const escapeCell = (val) => {
+        if (val == null) return '""';
+        const s = String(val).replace(/"/g, '""');
+        return `"${s}"`;
+      };
 
-  // Escapar comillas dobles dentro de cada celda y envolver en comillas
-  const escapeCell = (val) => {
-    if (val == null) return '""';
-    const s = String(val).replace(/"/g, '""');
-    return `"${s}"`;
-  };
+      const csv = rows.map(row => row.map(cell => escapeCell(cell)).join(SEP)).join('\r\n');
+      const BOM = '\uFEFF';
+      const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
 
-  // Construir CSV con CRLF (\r\n)
-  const csv = rows.map(row => row.map(cell => escapeCell(cell)).join(SEP)).join('\r\n');
-
-  // Agregar BOM para que Excel reconozca UTF-8 y los acentos
-  const BOM = '\uFEFF';
-  const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
-
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'asistencia.csv';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'asistencia.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
 
     // Inicial
     cargarJugadores();
     cargarAsistencia();
 
-    // Service Worker
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("service-worker.js");
     }
   </script>
+
+  <style>
+    @media (max-width: 768px) {
+      .only-desktop {
+        display: none;
+      }
+    }
+  </style>
 </body>
 </html>
+
 
 
 
