@@ -1,597 +1,429 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LPA - Liga de Pádel</title>
-    <!-- Carga de Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f7f7f7;
-            min-height: 100vh; 
-            margin: 0;
-            padding: 0;
-        }
-        .header-main {
-            border-bottom: 1px solid #e5e7eb;
-        }
-        .container-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 1.5rem;
-        }
-        .tab-button {
-            padding: 0.75rem 1.25rem;
-            cursor: pointer;
-            border-bottom: 3px solid transparent;
-            transition: border-color 0.2s, color 0.2s;
-            font-weight: 600;
-        }
-        .tab-button.active {
-            color: #1D4ED8; /* Azul */
-            border-bottom-color: #1D4ED8;
-        }
-        .tab-content {
-            display: none;
-            padding-top: 1.5rem;
-        }
-        .tab-content.active {
-            display: block;
-        }
-        .card {
-            background-color: white;
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            padding: 1.5rem;
-        }
-        
-        /* Estilos de responsividad para móvil */
-        @media (max-width: 640px) {
-            /* Ocultar el menú de pestañas horizontal en móvil para forzar diseño de app */
-            .tabs-menu {
-                display: none;
-            }
-            /* Mostrar barra de navegación inferior para móvil */
-            .navbar {
-                display: flex;
-            }
-            .container-content {
-                /* Padding horizontal 0 para móvil, vertical se gestiona en main-content */
-                padding-left: 0;
-                padding-right: 0;
-            }
-            .main-content {
-                 /* Dejar espacio para el header (arriba) y el navbar (abajo) */
-                padding-bottom: 90px; 
-                padding-top: 56px; /* Altura del header */
-            }
-            .header-main {
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                z-index: 10;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            }
-            .tab-content {
-                padding: 1rem;
-            }
-             /* El estado de auth ahora se muestra solo en el header */
-            .auth-status-container {
-                display: none; 
-            }
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LPA - Asistencia Pádel</title>
 
-        /* Barra de navegación inferior (solo para móvil) */
-        .navbar {
-            display: none; /* Oculto por defecto, visible solo en @media (max-width: 640px) */
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background-color: white;
-            border-top: 1px solid #e5e7eb;
-            z-index: 20;
-            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
-            justify-content: space-around;
-            height: 60px;
-        }
-        .nav-item {
-            color: #6b7280;
-            transition: color 0.2s;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            flex-grow: 1;
-        }
-        .nav-item.active {
-            color: #1D4ED8;
-        }
-        
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(255, 255, 255, 0.95);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-            flex-direction: column;
-            text-align: center;
-        }
-    </style>
+  <!-- PWA / manifest -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#ffffff" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <style>
+    body {
+      font-family: "Inter", sans-serif;
+      background-color: #f7f7f7;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+    .header-main {
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .container-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1.5rem;
+    }
+    .tab-button {
+      padding: 0.75rem 1.25rem;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: border-color 0.2s, color 0.2s;
+      font-weight: 600;
+    }
+    .tab-button.active {
+      color: #1d4ed8;
+      border-bottom-color: #1d4ed8;
+    }
+    .tab-content {
+      display: none;
+      padding-top: 1.5rem;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .card {
+      background-color: white;
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      padding: 1.5rem;
+    }
+    @media (max-width: 640px) {
+      .tabs-menu {
+        display: none;
+      }
+      .navbar {
+        display: flex;
+      }
+      .container-content {
+        padding-left: 0;
+        padding-right: 0;
+      }
+      .main-content {
+        padding-bottom: 90px;
+        padding-top: 56px;
+      }
+      .header-main {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 10;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      }
+      .tab-content {
+        padding: 1rem;
+      }
+      .auth-status-container {
+        display: none;
+      }
+    }
+    .navbar {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background-color: white;
+      border-top: 1px solid #e5e7eb;
+      z-index: 20;
+      box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+      justify-content: space-around;
+      height: 60px;
+    }
+    .nav-item {
+      color: #6b7280;
+      transition: color 0.2s;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex-grow: 1;
+    }
+    .nav-item.active {
+      color: #1d4ed8;
+    }
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(255, 255, 255, 0.95);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      flex-direction: column;
+      text-align: center;
+    }
+  </style>
 </head>
-<body class="bg-gray-100">
+<body>
+  <!-- Overlay de carga -->
+  <div id="loading-overlay" class="loading-overlay hidden">
+    <div
+      class="animate-spin rounded-full h-12 w-12 border-4 border-b-transparent border-blue-600 mb-4"
+    ></div>
+    <p class="text-gray-700 font-semibold" id="loading-text">
+      Cargando aplicación...
+    </p>
+  </div>
 
-    <!-- Capa de Carga Inicial -->
-    <div id="loading-overlay" class="loading-overlay hidden">
-        <div class="animate-spin rounded-full h-12 w-12 border-4 border-b-transparent border-blue-600 mb-4"></div>
-        <p class="text-gray-700 font-semibold" id="loading-text">Cargando aplicación y autenticación...</p>
+  <header class="header-main bg-white">
+    <div class="container-content flex justify-between items-center py-3">
+      <div class="flex items-center space-x-4">
+        <h1 class="text-xl font-bold text-red-600">LPA – Asistencia</h1>
+      </div>
+      <div id="user-status" class="text-sm text-gray-500 flex items-center space-x-2">
+        <span id="auth-icon" class="w-2 h-2 rounded-full bg-gray-400"></span>
+        <span id="auth-message" class="font-medium">Usuario: Cargando...</span>
+      </div>
     </div>
-    
-    <!-- Encabezado Fijo para Móvil, y Estándar para Escritorio -->
-    <header class="header-main bg-white">
-        <div class="container-content flex justify-between items-center py-3">
-            <div class="flex items-center space-x-4">
-                <h1 class="text-xl font-bold text-red-600">Asistencia LPA - Liga de Pádel</h1>
-            </div>
-            <!-- Estado de Usuario que simula el "Usuario: Cargando..." original -->
-            <div id="user-status" class="text-sm text-gray-500 flex items-center space-x-2">
-                <span id="auth-icon" class="w-2 h-2 rounded-full bg-gray-400"></span>
-                <span id="auth-message" class="font-medium">Usuario: Cargando...</span>
-            </div>
-        </div>
-
-        <!-- Menú de Pestañas (Solo para Escritorio) -->
-        <nav class="container-content tabs-menu hidden sm:flex border-b border-gray-200">
-            <button id="tab-registro-btn-desk" class="tab-button active" data-tab="tab-registro">Registro de Asistencia</button>
-            <button id="tab-historial-btn-desk" class="tab-button" data-tab="tab-historial">Reporte Individual</button>
-            <button id="tab-gestion-btn-desk" class="tab-button" data-tab="tab-gestion">Gestión de Academia</button>
-        </nav>
-    </header>
-
-    <!-- Contenido Principal -->
-    <main class="main-content container-content">
-        
-        <!-- Pestaña 1: Registro de Asistencia -->
-        <div id="tab-registro" class="tab-content active">
-            <div class="flex flex-wrap -mx-4">
-                <!-- Columna de Instrucciones -->
-                <div class="w-full lg:w-1/3 px-4 mb-6 lg:mb-0">
-                    <div class="card h-full">
-                        <h2 class="text-lg font-bold text-gray-800 mb-3">Instrucciones</h2>
-                        <p class="text-sm text-gray-600">
-                            Selecciona el **Nombre del Jugador** y el **Tipo de Registro** (Entrada/Salida) para tomar la asistencia. 
-                            <br><br>
-                            Usa la pestaña **Reporte Individual** para ver tu historial y la pestaña **Gestión de Academia** para añadir/eliminar jugadores o gestionar horarios.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Columna de Registro Diario -->
-                <div class="w-full lg:w-2/3 px-4">
-                    <div class="card">
-                        <h2 class="text-lg font-bold text-red-600 mb-6 flex items-center">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2m-9 0V3h4v2m-4 0h4m-4 0H7m0 0v2"></path></svg>
-                            Asistencia Diaria
-                        </h2>
-
-                        <!-- Muestra el ID de usuario si hay éxito o error, pero oculto por defecto -->
-                        <div id="user-info" class="mb-6 p-3 bg-gray-50 rounded-lg shadow-inner border border-gray-200 hidden">
-                            <p class="text-sm font-medium text-gray-600 mb-1">Tu ID de Usuario (Para registro privado):</p>
-                            <code id="user-id" class="block bg-white p-2 text-xs text-gray-800 break-all rounded border border-gray-200">Cargando...</code>
-                        </div>
-
-                        <form id="registro-form" class="space-y-4">
-                            <div>
-                                <label for="nombre-jugador" class="block text-sm font-medium text-gray-700">Nombre del Jugador</label>
-                                <input type="text" id="nombre-jugador" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition duration-150">
-                            </div>
-                            <div>
-                                <label for="tipo-registro" class="block text-sm font-medium text-gray-700">Tipo de Registro</label>
-                                <select id="tipo-registro" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition duration-150 bg-white">
-                                    <option value="">Selecciona...</option>
-                                    <option value="entrada">Entrada a la Pista</option>
-                                    <option value="salida">Salida de la Pista</option>
-                                </select>
-                            </div>
-                            
-                            <button type="submit" id="submit-btn" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-200 disabled:opacity-50" disabled>
-                                Registrar Ahora
-                            </button>
-                            
-                            <!-- Mensaje de confirmación/error de registro -->
-                            <div id="registro-message" class="mt-4 p-3 text-sm rounded-md hidden" role="alert"></div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Pestaña 2: Reporte Individual (Ahora muestra el Historial) -->
-        <div id="tab-historial" class="tab-content">
-            <h2 class="text-xl font-semibold mb-4 text-gray-700">Reporte Individual</h2>
-            
-            <div id="historial-loading" class="text-center p-4 text-gray-500 hidden">
-                Cargando historial...
-            </div>
-            
-            <div id="historial-lista" class="space-y-3">
-                <p class="text-center text-gray-500 mt-4" id="no-registros">Aún no hay registros de asistencia en tu historial.</p>
-            </div>
-        </div>
-
-        <!-- Pestaña 3: Gestión de Academia (Contenido Vacío Temporal) -->
-        <div id="tab-gestion" class="tab-content">
-            <h2 class="text-xl font-semibold mb-4 text-gray-700">Gestión de Academia</h2>
-            <div class="card p-6 text-gray-500">
-                <p>Esta sección está en desarrollo. Aquí podrás gestionar jugadores, clases y horarios.</p>
-            </div>
-        </div>
-        
-    </main>
-
-    <!-- Barra de Navegación Inferior (Solo para Móvil) -->
-    <nav class="navbar">
-        <button id="tab-registro-btn-mobile" class="nav-item active" data-tab="tab-registro">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2m-9 0V3h4v2m-4 0h4m-4 0H7m0 0v2"></path></svg>
-            <span class="text-xs">Registro</span>
-        </button>
-        <button id="tab-historial-btn-mobile" class="nav-item" data-tab="tab-historial">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-            <span class="text-xs">Reporte</span>
-        </button>
-        <button id="tab-gestion-btn-mobile" class="nav-item" data-tab="tab-gestion">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37a1.724 1.724 0 002.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-            <span class="text-xs">Gestión</span>
-        </button>
+    <nav class="container-content tabs-menu hidden sm:flex border-b border-gray-200">
+      <button id="tab-registro-btn-desk" class="tab-button active" data-tab="tab-registro">
+        Registro
+      </button>
+      <button id="tab-historial-btn-desk" class="tab-button" data-tab="tab-historial">
+        Historial
+      </button>
+      <button id="tab-gestion-btn-desk" class="tab-button" data-tab="tab-gestion">
+        Gestión
+      </button>
     </nav>
+  </header>
 
-    <!-- Script de Firebase y Lógica de la Aplicación -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, collection, addDoc, onSnapshot, query, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+  <main class="main-content container-content">
+    <!-- TAB Registro -->
+    <div id="tab-registro" class="tab-content active">
+      <div class="flex flex-wrap -mx-4">
+        <div class="w-full lg:w-1/3 px-4 mb-6 lg:mb-0">
+          <div class="card h-full">
+            <h2 class="text-lg font-bold text-gray-800 mb-3">Instrucciones</h2>
+            <p class="text-sm text-gray-600">
+              Selecciona el jugador, el tipo de registro (entrada/salida) y presiona “Registrar”.
+            </p>
+          </div>
+        </div>
+        <div class="w-full lg:w-2/3 px-4">
+          <div class="card">
+            <h2 class="text-lg font-bold text-red-600 mb-6 flex items-center">
+              <svg
+                class="w-5 h-5 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2m-9 0V3h4v2m-4 0h4m-4 0H7m0 0v2"
+                ></path>
+              </svg>
+              Asistencia
+            </h2>
+            <div id="user-info" class="mb-6 p-3 bg-gray-50 rounded-lg shadow-inner border border-gray-200 hidden">
+              <p class="text-sm font-medium text-gray-600 mb-1">ID Usuario:</p>
+              <code
+                id="user-id"
+                class="block bg-white p-2 text-xs text-gray-800 break-all rounded border border-gray-200"
+                >Cargando...</code
+              >
+            </div>
+            <form id="registro-form" class="space-y-4">
+              <div>
+                <label for="selector-jugador" class="block text-sm font-medium text-gray-700">Jugador</label>
+                <select
+                  id="selector-jugador"
+                  required
+                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition duration-150 bg-white"
+                >
+                  <option value="">Selecciona jugador</option>
+                </select>
+              </div>
+              <div>
+                <label for="tipo-registro" class="block text-sm font-medium text-gray-700">Tipo de Registro</label>
+                <select
+                  id="tipo-registro"
+                  required
+                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition duration-150 bg-white"
+                >
+                  <option value="">Selecciona...</option>
+                  <option value="entrada">Entrada</option>
+                  <option value="salida">Salida</option>
+                </select>
+              </div>
+              <button
+                type="submit"
+                id="submit-btn"
+                class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-200 disabled:opacity-50"
+                disabled
+              >
+                Registrar
+              </button>
+              <div id="registro-message" class="mt-4 p-3 text-sm rounded-md hidden" role="alert"></div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        // Establecer nivel de log para depuración de Firebase
-        setLogLevel('debug');
+    <!-- TAB Historial / Reportes -->
+    <div id="tab-historial" class="tab-content">
+      <h2 class="text-xl font-semibold mb-4 text-gray-700">Historial & Reportes</h2>
+      <div class="mb-4 flex space-x-2">
+        <button
+          id="btn-descargar-todos"
+          class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+        >
+          Descargar Todos
+        </button>
+        <select id="selector-reporte-jugador" class="px-3 py-2 border rounded">
+          <option value="">Todos los jugadores</option>
+        </select>
+        <button
+          id="btn-descargar-por-jugador"
+          class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
+        >
+          Descargar Jugador
+        </button>
+      </div>
+      <div id="historial-loading" class="text-center p-4 text-gray-500 hidden">
+        Cargando historial...
+      </div>
+      <div id="historial-lista" class="space-y-3">
+        <p class="text-center text-gray-500 mt-4" id="no-registros">
+          No hay registros aún.
+        </p>
+      </div>
+    </div>
 
-        // --- Variables de Entorno (Proporcionadas por el Contenedor) ---
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const rawFirebaseConfig = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
-        let firebaseConfig = {};
-        try {
-            firebaseConfig = JSON.parse(rawFirebaseConfig);
-        } catch (e) {
-            console.error("Error al parsear la configuración de Firebase:", e);
-        }
-        
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        
-        // --- Referencias DOM ---
-        const loadingOverlay = document.getElementById('loading-overlay');
-        const loadingText = document.getElementById('loading-text');
-        
-        // Mensajes de Auth en el Header
-        const authMessage = document.getElementById('auth-message');
-        const authIcon = document.getElementById('auth-icon');
+    <!-- TAB Gestión (Jugadores / Horarios) -->
+    <div id="tab-gestion" class="tab-content">
+      <h2 class="text-xl font-semibold mb-4 text-gray-700">Gestión de Academia</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="card">
+          <h3 class="font-semibold mb-2">Agregar Jugador</h3>
+          <form id="form-agregar-jugador" class="space-y-2">
+            <div>
+              <label for="nombre-jugador-nuevo" class="block text-sm font-medium text-gray-700">Nombre</label>
+              <input
+                type="text"
+                id="nombre-jugador-nuevo"
+                required
+                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label for="apellido-jugador-nuevo" class="block text-sm font-medium text-gray-700">Apellido</label>
+              <input
+                type="text"
+                id="apellido-jugador-nuevo"
+                required
+                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <button
+              type="submit"
+              class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+            >
+              Agregar Jugador
+            </button>
+          </form>
+        </div>
+        <div class="card">
+          <h3 class="font-semibold mb-2">Agregar Horario / Grupo</h3>
+          <form id="form-agregar-horario" class="space-y-2">
+            <div>
+              <label for="hora-inicio-nuevo" class="block text-sm font-medium text-gray-700">Hora Inicio</label>
+              <input
+                type="time"
+                id="hora-inicio-nuevo"
+                required
+                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label for="hora-fin-nuevo" class="block text-sm font-medium text-gray-700">Hora Fin</label>
+              <input
+                type="time"
+                id="hora-fin-nuevo"
+                required
+                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label for="grupo-nuevo" class="block text-sm font-medium text-gray-700">Grupo (opcional)</label>
+              <input
+                type="text"
+                id="grupo-nuevo"
+                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <button
+              type="submit"
+              class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
+            >
+              Agregar Horario
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
 
-        const userIdCode = document.getElementById('user-id');
-        const userInfoContainer = document.getElementById('user-info');
-        const registroForm = document.getElementById('registro-form');
-        const submitBtn = document.getElementById('submit-btn');
-        const registroMessage = document.getElementById('registro-message');
-        const historialLista = document.getElementById('historial-lista');
-        const noRegistros = document.getElementById('no-registros');
-        const historialLoading = document.getElementById('historial-loading');
+  <nav class="navbar">
+    <button id="tab-registro-btn-mobile" class="nav-item active" data-tab="tab-registro">
+      <svg
+        class="w-6 h-6"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2m-9 0V3h4v2m-4 0h4m-4 0H7m0 0v2"
+        ></path>
+      </svg>
+      <span class="text-xs">Registro</span>
+    </button>
+    <button id="tab-historial-btn-mobile" class="nav-item" data-tab="tab-historial">
+      <svg
+        class="w-6 h-6"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+        ></path>
+      </svg>
+      <span class="text-xs">Historial</span>
+    </button>
+    <button id="tab-gestion-btn-mobile" class="nav-item" data-tab="tab-gestion">
+      <svg
+        class="w-6 h-6"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37a1.724 1.724 0 002.572-1.065z"
+        ></path>
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+        ></path>
+      </svg>
+      <span class="text-xs">Gestión</span>
+    </button>
+  </nav>
 
-        // --- Variables de Firebase ---
-        let app, db, auth, userId = null;
-        let isAuthReady = false;
-        let retryCount = 0;
-        const MAX_RETRIES = 5;
-        const isConfigValid = Object.keys(firebaseConfig).length > 0 && firebaseConfig.projectId;
-
-
-        // --- Inicialización de Firebase y Autenticación ---
-        async function initializeFirebase() {
-            // Si la configuración no es válida, no inicializamos Firebase y solo mostramos el error
-            if (!isConfigValid) {
-                const error = new Error("Configuración de Firebase no encontrada.");
-                console.error("Error fatal al inicializar Firebase:", error);
-                // Llama a handleAuthError para simular el fallo de conexión
-                handleAuthError(error, true);
-                loadingOverlay.classList.add('hidden');
-                return; 
-            }
-            
-            loadingOverlay.classList.remove('hidden');
-
-            try {
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app); 
-                
-                updateAuthStatus('connecting', 'Usuario: Conectando...');
-                
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        userIdCode.textContent = userId;
-                        userInfoContainer.classList.remove('hidden'); // Mostrar ID
-                        
-                        updateAuthStatus('success', 'Usuario: Conectado');
-                        submitBtn.disabled = false;
-                        isAuthReady = true;
-                        loadingOverlay.classList.add('hidden');
-                        
-                        setupRealtimeListener();
-                    } else {
-                        if (isAuthReady === false) { 
-                            // Esto solo se ejecuta si fallaron todos los reintentos
-                            handleAuthError(new Error("No se pudo iniciar sesión después de varios intentos."));
-                        }
-                    }
-                });
-
-                // Intento inicial de autenticación
-                await attemptAuth(initialAuthToken, retryCount);
-
-            } catch (error) {
-                console.error("Error fatal al inicializar Firebase:", error);
-                handleAuthError(error);
-            }
-        }
-        
-        // Función para actualizar el estado de autenticación en el header
-        function updateAuthStatus(status, text) {
-            authIcon.classList.remove('bg-gray-400', 'bg-red-500', 'bg-green-500');
-            authMessage.textContent = text;
-
-            if (status === 'connecting') {
-                authIcon.classList.add('bg-gray-400', 'animate-pulse');
-            } else if (status === 'error') {
-                authIcon.classList.add('bg-red-500');
-            } else if (status === 'success') {
-                authIcon.classList.add('bg-green-500');
-            }
-        }
-
-
-        async function attemptAuth(token, attempt) {
-            loadingText.textContent = `Autenticando... (Intento ${attempt + 1}/${MAX_RETRIES})`;
-            
-            try {
-                if (token) {
-                    await signInWithCustomToken(auth, token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (error) {
-                // Solo loguear, el listener onAuthStateChanged maneja el estado final
-                console.error(`Error de autenticación en el intento ${attempt + 1}:`, error);
-                
-                if (attempt < MAX_RETRIES - 1) {
-                    retryCount++;
-                    const delay = Math.pow(2, attempt) * 1000 + (Math.random() * 1000); 
-                    loadingText.textContent = `Fallo. Reintentando en ${Math.floor(delay/1000)}s...`;
-                    
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    await attemptAuth(token, retryCount); 
-                } else {
-                    // Si falla el último intento, se fuerza el estado de error
-                    handleAuthError(error);
-                }
-            }
-        }
-
-
-        function handleAuthError(error, isConfigMissing = false) {
-            userId = crypto.randomUUID(); 
-            userIdCode.textContent = `ID Temporal: ${userId}`;
-            userInfoContainer.classList.remove('hidden'); // Mostrar el ID temporal
-
-            let errorMessage = `Usuario: ERROR de conexión.`;
-            let detailedError = `Error: ${error.message}`;
-
-            if (isConfigMissing) {
-                errorMessage = `Usuario: ERROR de Configuración`;
-                detailedError = `ERROR: Configuración de Firebase no encontrada. El registro NO se guardará.`;
-            }
-            
-            updateAuthStatus('error', errorMessage);
-            
-            submitBtn.disabled = true;
-            isAuthReady = true; 
-            loadingOverlay.classList.add('hidden');
-            
-            // Mostrar mensaje de error detallado en el historial
-            historialLista.innerHTML = `<div class="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg shadow-sm">
-                                            <p class="font-bold">Error de Conexión</p>
-                                            <p class="text-sm">${detailedError}</p>
-                                        </div>`;
-            noRegistros.classList.add('hidden');
-        }
-
-
-        // --- Lógica del Listener en Tiempo Real (onSnapshot) ---
-        function setupRealtimeListener() {
-            if (!db || !userId) return;
-
-            historialLoading.classList.remove('hidden');
-            
-            const registrosRef = collection(db, `artifacts/${appId}/users/${userId}/registros`);
-            const q = query(registrosRef); 
-            
-            onSnapshot(q, (snapshot) => {
-                historialLoading.classList.add('hidden');
-                const registros = [];
-                snapshot.forEach((doc) => {
-                    const data = doc.data();
-                    registros.push({
-                        id: doc.id,
-                        ...data
-                    });
-                });
-                
-                registros.sort((a, b) => {
-                    if (a.timestamp && b.timestamp) {
-                        return b.timestamp.toMillis() - a.timestamp.toMillis();
-                    }
-                    return 0;
-                });
-
-                renderHistorial(registros);
-            }, (error) => {
-                console.error("Error al escuchar cambios en el historial:", error);
-                historialLoading.classList.add('hidden');
-                historialLista.innerHTML = `<p class="text-center text-red-500 mt-4">Error al cargar datos. Verifica tus permisos: ${error.message}</p>`;
-            });
-        }
-        
-        // --- Renderizado del Historial ---
-        function renderHistorial(registros) {
-            historialLista.innerHTML = '';
-            
-            if (registros.length === 0) {
-                noRegistros.classList.remove('hidden');
-                return;
-            }
-            
-            noRegistros.classList.add('hidden');
-            
-            registros.forEach(registro => {
-                const date = registro.timestamp ? registro.timestamp.toDate() : new Date();
-                const formattedDate = date.toLocaleDateString('es-ES', { 
-                    year: 'numeric', 
-                    month: 'short', 
-                    day: 'numeric', 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
-                
-                const typeColor = registro.tipo === 'entrada' ? 'bg-green-500' : 'bg-red-500';
-                const typeText = registro.tipo === 'entrada' ? 'Entrada' : 'Salida';
-                
-                const registroItem = document.createElement('div');
-                registroItem.className = 'p-4 bg-white rounded-lg shadow flex items-center justify-between';
-                registroItem.innerHTML = `
-                    <div>
-                        <p class="text-gray-900 font-semibold">${registro.nombre}</p>
-                        <p class="text-xs text-gray-500">${formattedDate}</p>
-                    </div>
-                    <span class="px-3 py-1 text-xs font-medium text-white ${typeColor} rounded-full">${typeText}</span>
-                `;
-                historialLista.appendChild(registroItem);
-            });
-        }
-
-        // --- Manejo del Formulario de Registro ---
-        registroForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            if (!isConfigValid || !isAuthReady || !userId) {
-                // Muestra un mensaje de error si no se pudo conectar o si la configuración es inválida
-                showMessage("ERROR: La aplicación no está conectada o configurada. El registro no se puede guardar.", 'bg-red-100', 'text-red-800');
-                return;
-            }
-
-            const nombre = document.getElementById('nombre-jugador').value.trim();
-            const tipo = document.getElementById('tipo-registro').value;
-            
-            if (!nombre || !tipo) {
-                showMessage("Por favor, completa todos los campos.", 'bg-red-100', 'text-red-800');
-                return;
-            }
-
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Registrando...';
-            
-            try {
-                const registrosRef = collection(db, `artifacts/${appId}/users/${userId}/registros`);
-
-                await addDoc(registrosRef, {
-                    nombre: nombre,
-                    tipo: tipo,
-                    timestamp: serverTimestamp(),
-                    userId: userId 
-                });
-
-                showMessage("Registro exitoso.", 'bg-green-100', 'text-green-800');
-                registroForm.reset();
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Registrar Ahora';
-                
-            } catch (error) {
-                console.error("Error al registrar la asistencia:", error);
-                showMessage(`Error al registrar: ${error.message}`, 'bg-red-100', 'text-red-800');
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Registrar Ahora';
-            }
-        });
-
-        // --- Función para mostrar mensajes temporales ---
-        function showMessage(text, bgColor, textColor) {
-            registroMessage.textContent = text;
-            registroMessage.className = `mt-4 p-3 text-sm rounded-md ${bgColor} ${textColor}`;
-            registroMessage.classList.remove('hidden');
-            setTimeout(() => {
-                registroMessage.classList.add('hidden');
-            }, 5000);
-        }
-
-        // --- Lógica de Pestañas (Tabs) ---
-        function setupTabs() {
-            const tabButtonsDesk = document.querySelectorAll('.tabs-menu .tab-button');
-            const tabButtonsMobile = document.querySelectorAll('.navbar .nav-item');
-            const tabContents = document.querySelectorAll('.tab-content');
-
-            function activateTab(targetId) {
-                tabContents.forEach(content => content.classList.remove('active'));
-                document.getElementById(targetId).classList.add('active');
-
-                document.querySelectorAll('.tab-button, .nav-item').forEach(btn => btn.classList.remove('active'));
-
-                document.querySelectorAll(`[data-tab="${targetId}"]`).forEach(btn => btn.classList.add('active'));
-            }
-
-            tabButtonsDesk.forEach(button => {
-                button.addEventListener('click', (e) => {
-                    e.preventDefault(); 
-                    activateTab(button.dataset.tab);
-                });
-            });
-
-            tabButtonsMobile.forEach(button => {
-                button.addEventListener('click', (e) => {
-                    e.preventDefault(); 
-                    activateTab(button.dataset.tab);
-                });
-            });
-
-            // Establecer pestaña inicial
-            activateTab('tab-registro');
-        }
-
-
-        // --- Inicializar la aplicación al cargar la ventana ---
-        window.onload = function() {
-            setupTabs();
-            initializeFirebase();
-        };
-
-    </script>
+  <!-- Aquí cargas tu script principal -->
+    <script>
+  window.__firebase_config = {
+    apiKey: "AIzaSyCR423gNHR_Wb5kE65bSum_R542IJ3cN6I",
+    authDomain: "academia-lpa.firebaseapp.com",
+    projectId: "academia-lpa",
+    storageBucket: "academia-lpa.firebasestorage.app",
+    messagingSenderId: "311766682135",
+    appId: "1:311766682135:web:c76ca5330cf30132076a52",
+    measurementId: "G-194YH0TR6E"
+  };
+  window.__app_id = "academia-lpa";
+</script>
+  <script type="module" src="/src/app.js"></script>
 </body>
 </html>
+
+
 
 
 
