@@ -217,25 +217,38 @@
       cargarAsistencia();
     });
 
-  // Exportar CSV (con encabezados y formato tabla correcto)
+// Exportar CSV (compatible con Excel: BOM + ; separator + CRLF + escape de comillas)
 document.getElementById("export-csv").addEventListener("click", () => {
-  let rows = [["Nombre", "Horario", "Tipo", "Fecha"]];
-
+  // Armamos las filas desde la tabla (encabezado + datos)
+  const rows = [["Nombre", "Horario", "Tipo", "Fecha"]];
   document.querySelectorAll("#records-table tbody tr").forEach(tr => {
-    const cols = [...tr.querySelectorAll("td")].map(td => td.innerText);
+    const cols = [...tr.querySelectorAll("td")].map(td => td.innerText.trim());
     rows.push(cols);
   });
 
-  // Crear CSV con saltos de línea correctos
-  let csvContent = rows.map(row => row.map(val => `"${val}"`).join(",")).join("\r\n");
+  const SEP = ';';
 
-  // Descargar archivo
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  // Escapar comillas dobles dentro de cada celda y envolver en comillas
+  const escapeCell = (val) => {
+    if (val == null) return '""';
+    const s = String(val).replace(/"/g, '""');
+    return `"${s}"`;
+  };
+
+  // Construir CSV con CRLF (\r\n)
+  const csv = rows.map(row => row.map(cell => escapeCell(cell)).join(SEP)).join('\r\n');
+
+  // Agregar BOM para que Excel reconozca UTF-8 y los acentos
+  const BOM = '\uFEFF';
+  const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
+
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
+  const a = document.createElement('a');
   a.href = url;
-  a.download = "asistencia.csv";
+  a.download = 'asistencia.csv';
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
   URL.revokeObjectURL(url);
 });
 
@@ -250,6 +263,7 @@ document.getElementById("export-csv").addEventListener("click", () => {
   </script>
 </body>
 </html>
+
 
 
 
