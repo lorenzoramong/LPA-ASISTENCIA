@@ -118,7 +118,7 @@
   <!-- Firebase -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     // Configuración de Firebase
     const firebaseConfig = {
@@ -185,9 +185,13 @@
       const apellido = document.getElementById("input-apellido-jugador").value.trim();
       const horario = document.getElementById("input-horario").value.trim();
 
-      await addDoc(collection(db, "jugadores"), { nombre, apellido, horario });
-      formJugador.reset();
-      cargarJugadores();
+      try {
+        await addDoc(collection(db, "jugadores"), { nombre, apellido, horario });
+        formJugador.reset();
+        cargarJugadores();
+      } catch (err) {
+        alert("Error guardando jugador: " + err.message);
+      }
     });
 
     //
@@ -198,12 +202,13 @@
       const querySnapshot = await getDocs(collection(db, "asistencia"));
       querySnapshot.forEach(doc => {
         const registro = doc.data();
+        const fecha = registro.fechaHora?.seconds ? new Date(registro.fechaHora.seconds * 1000).toLocaleString() : "";
         const fila = document.createElement("tr");
         fila.innerHTML = `
           <td class="border px-2 py-1">${registro.nombre}</td>
           <td class="border px-2 py-1">${registro.horario}</td>
           <td class="border px-2 py-1">${registro.tipo}</td>
-          <td class="border px-2 py-1">${new Date(registro.fechaHora.seconds * 1000).toLocaleString()}</td>
+          <td class="border px-2 py-1">${fecha}</td>
         `;
         tableBodyAsistencia.appendChild(fila);
       });
@@ -216,15 +221,18 @@
       const horario = jugadorOption.dataset.horario;
       const tipo = document.getElementById("select-tipo").value;
 
-      await addDoc(collection(db, "asistencia"), {
-        nombre,
-        horario,
-        tipo,
-        fechaHora: new Date()
-      });
-
-      formAsistencia.reset();
-      cargarAsistencia();
+      try {
+        await addDoc(collection(db, "asistencia"), {
+          nombre,
+          horario,
+          tipo,
+          fechaHora: serverTimestamp()
+        });
+        formAsistencia.reset();
+        cargarAsistencia();
+      } catch (err) {
+        alert("Error guardando asistencia: " + err.message);
+      }
     });
 
     // Inicializar
@@ -233,6 +241,7 @@
   </script>
 </body>
 </html>
+
 
 
 
