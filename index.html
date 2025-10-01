@@ -46,8 +46,11 @@
       <div class="bg-white p-4 rounded shadow mb-4">
         <form id="attendance-form" class="space-y-4">
           <div>
-            <label for="input-nombre" class="block text-gray-700">Nombre del Jugador</label>
-            <input type="text" id="input-nombre" required class="w-full px-3 py-2 border border-gray-300 rounded" />
+            <label for="select-jugador" class="block text-gray-700">Jugador</label>
+            <!-- 🔹 Cambiamos input por select dinámico -->
+            <select id="select-jugador" required class="w-full px-3 py-2 border border-gray-300 rounded">
+              <option value="">Selecciona un jugador...</option>
+            </select>
           </div>
           <div>
             <label for="select-tipo" class="block text-gray-700">Tipo de Registro</label>
@@ -67,7 +70,8 @@
         <table id="records-table" class="w-full text-sm border-collapse">
           <thead>
             <tr class="bg-red-100">
-              <th class="border px-2 py-1">Nombre</th>
+              <th class="border px-2 py-1">Jugador</th>
+              <th class="border px-2 py-1">Horario</th>
               <th class="border px-2 py-1">Tipo</th>
               <th class="border px-2 py-1">Fecha y Hora</th>
             </tr>
@@ -134,18 +138,24 @@
     const formAsistencia = document.getElementById("attendance-form");
     const tableBodyAsistencia = document.querySelector("#records-table tbody");
     const exportBtn = document.getElementById("export-btn");
+    const selectJugador = document.getElementById("select-jugador");
 
     formAsistencia.addEventListener("submit", e => {
       e.preventDefault();
-      const nombre = document.getElementById("input-nombre").value.trim();
+      const jugadorValue = selectJugador.value;
+      if (!jugadorValue) return;
+
+      const [nombreCompleto, horario] = jugadorValue.split(" | "); // 🔹 usamos separador
       const tipo = document.getElementById("select-tipo").value;
       const fechaHora = new Date().toLocaleString();
 
-      const registro = { nombre, tipo, fechaHora };
+      const registro = { nombreCompleto, horario, tipo, fechaHora };
       registros.push(registro);
+
       const fila = document.createElement("tr");
       fila.innerHTML = `
-        <td class="border px-2 py-1">${registro.nombre}</td>
+        <td class="border px-2 py-1">${registro.nombreCompleto}</td>
+        <td class="border px-2 py-1">${registro.horario}</td>
         <td class="border px-2 py-1">${registro.tipo}</td>
         <td class="border px-2 py-1">${registro.fechaHora}</td>
       `;
@@ -158,10 +168,10 @@
         alert("No hay registros para exportar.");
         return;
       }
-      const encabezados = ["Nombre", "Tipo", "FechaHora"];
-      const filas = registros.map(r => [r.nombre, r.tipo, r.fechaHora]);
+      const encabezados = ["Jugador", "Horario", "Tipo", "FechaHora"];
+      const filas = registros.map(r => [r.nombreCompleto, r.horario, r.tipo, r.fechaHora]);
       const csv = [encabezados, ...filas]
-        .map(row => row.map(val => `"${val}"`).join(","))
+        .map(row => row.map(val => `"${val}"`).join(";")) // 🔹 usamos ; para mejor compatibilidad
         .join("\n");
 
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -186,6 +196,7 @@
 
       const jugador = { nombre, apellido, horario };
       jugadores.push(jugador);
+
       const fila = document.createElement("tr");
       fila.innerHTML = `
         <td class="border px-2 py-1">${jugador.nombre}</td>
@@ -193,11 +204,19 @@
         <td class="border px-2 py-1">${jugador.horario}</td>
       `;
       tableBodyJugadores.appendChild(fila);
+
+      // 🔹 Agregar al desplegable de asistencia
+      const option = document.createElement("option");
+      option.value = `${jugador.nombre} ${jugador.apellido} | ${jugador.horario}`;
+      option.textContent = `${jugador.nombre} ${jugador.apellido} – ${jugador.horario}`;
+      selectJugador.appendChild(option);
+
       formJugador.reset();
     });
   </script>
 </body>
 </html>
+
 
 
 
