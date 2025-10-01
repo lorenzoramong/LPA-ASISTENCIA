@@ -31,7 +31,7 @@
   </style>
 </head>
 <body>
-  <div class="max-w-3xl mx-auto p-4">
+  <div class="max-w-4xl mx-auto p-4">
     <h1 class="text-3xl font-bold text-red-600 mb-6">LPA – Asistencia</h1>
 
     <!-- Tabs -->
@@ -64,7 +64,10 @@
       </div>
 
       <div class="bg-white p-4 rounded shadow mb-4">
-        <h2 class="text-lg font-semibold text-gray-800 mb-2">Registros actuales</h2>
+        <div class="flex justify-between items-center mb-2">
+          <h2 class="text-lg font-semibold text-gray-800">Registros actuales</h2>
+          <button id="btn-export" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded">Exportar CSV</button>
+        </div>
         <table id="records-table" class="w-full text-sm border-collapse">
           <thead>
             <tr class="bg-red-100">
@@ -107,6 +110,7 @@
               <th class="border px-2 py-1">Nombre</th>
               <th class="border px-2 py-1">Apellido</th>
               <th class="border px-2 py-1">Horario</th>
+              <th class="border px-2 py-1">Acciones</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -118,7 +122,7 @@
   <!-- Firebase -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     // Configuración de Firebase
     const firebaseConfig = {
@@ -150,6 +154,7 @@
     const formAsistencia = document.getElementById("attendance-form");
     const tableBodyAsistencia = document.querySelector("#records-table tbody");
     const selectNombre = document.getElementById("select-nombre");
+    const btnExport = document.getElementById("btn-export");
 
     const formJugador = document.getElementById("jugador-form");
     const tableBodyJugadores = document.querySelector("#jugadores-table tbody");
@@ -162,13 +167,16 @@
       selectNombre.innerHTML = '<option value="">Selecciona un jugador...</option>';
 
       const querySnapshot = await getDocs(collection(db, "jugadores"));
-      querySnapshot.forEach(doc => {
-        const jugador = doc.data();
+      querySnapshot.forEach(docSnap => {
+        const jugador = docSnap.data();
         const fila = document.createElement("tr");
         fila.innerHTML = `
           <td class="border px-2 py-1">${jugador.nombre}</td>
           <td class="border px-2 py-1">${jugador.apellido}</td>
           <td class="border px-2 py-1">${jugador.horario}</td>
+          <td class="border px-2 py-1 text-center">
+            <button class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs" data-id="${docSnap.id}">Eliminar</button>
+          </td>
         `;
         tableBodyJugadores.appendChild(fila);
 
@@ -176,6 +184,16 @@
         selectNombre.innerHTML += `<option value="${jugador.nombre} ${jugador.apellido}" data-horario="${jugador.horario}">
           ${jugador.nombre} ${jugador.apellido} - ${jugador.horario}
         </option>`;
+      });
+
+      // Eventos de eliminar jugador
+      document.querySelectorAll("#jugadores-table button").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          if (confirm("¿Seguro que quieres eliminar este jugador?")) {
+            await deleteDoc(doc(db, "jugadores", btn.dataset.id));
+            cargarJugadores();
+          }
+        });
       });
     }
 
@@ -235,13 +253,32 @@
       }
     });
 
+    //
+    // 🔹 EXPORTAR A CSV
+    //
+    btnExport.addEventListener("click", () => {
+      let rows = [["Nombre", "Horario", "Tipo", "Fecha y Hora"]];
+      document.querySelectorAll("#records-table tbody tr").forEach(tr => {
+        const cols = tr.querySelectorAll("td");
+        let row = [];
+        cols.forEach(td => row.push(td.innerText));
+        rows.push(row);
+      });
+
+      let csvContent = rows.map(e => e.join(",")).join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "asistencia.csv";
+      link.click();
+    });
+
     // Inicializar
     cargarJugadores();
     cargarAsistencia();
   </script>
 </body>
 </html>
-
 
 
 
