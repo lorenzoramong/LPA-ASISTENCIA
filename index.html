@@ -1,56 +1,77 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Registro de Asistencia - LPA</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LPA – Asistencia (Offline)</title>
+
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {
-      background-color: #fef2f2; /* rojo muy claro */
+      background-color: #fef2f2;
       font-family: sans-serif;
+    }
+    .container {
+      max-width: 600px;
+      margin: 2rem auto;
+      padding: 1rem;
+    }
+    .card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    table th, table td {
+      border: 1px solid #ddd;
+      padding: 0.5rem;
+    }
+    table th {
+      background-color: #fee2e2;
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-start p-4">
+<body>
+  <div class="container">
+    <h1 class="text-2xl font-bold text-red-600 mb-4">Registro de Asistencia</h1>
+    <div class="card mb-6">
+      <form id="attendance-form" class="space-y-4">
+        <div>
+          <label for="input-nombre" class="block text-gray-700">Nombre del Jugador</label>
+          <input type="text" id="input-nombre" required class="w-full px-3 py-2 border border-gray-300 rounded" />
+        </div>
+        <div>
+          <label for="select-tipo" class="block text-gray-700">Tipo de Registro</label>
+          <select id="select-tipo" required class="w-full px-3 py-2 border border-gray-300 rounded">
+            <option value="">Selecciona...</option>
+            <option value="Entrada">Entrada</option>
+            <option value="Salida">Salida</option>
+          </select>
+        </div>
+        <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded">Registrar Asistencia</button>
+      </form>
+    </div>
 
-  <header class="w-full max-w-xl mb-6">
-    <h1 class="text-2xl font-bold text-center text-red-600">Registro de Asistencia - LPA</h1>
-  </header>
-
-  <main class="w-full max-w-xl bg-white p-6 rounded shadow">
-    <form id="attendance-form" class="space-y-4">
-      <div>
-        <label for="input-nombre" class="block text-gray-700 font-medium">Nombre del Jugador</label>
-        <input type="text" id="input-nombre" required class="w-full px-3 py-2 border border-gray-300 rounded" />
-      </div>
-      <div>
-        <label for="select-tipo" class="block text-gray-700 font-medium">Tipo de Registro</label>
-        <select id="select-tipo" required class="w-full px-3 py-2 border border-gray-300 rounded">
-          <option value="">Selecciona...</option>
-          <option value="Entrada">Entrada</option>
-          <option value="Salida">Salida</option>
-        </select>
-      </div>
-      <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded">Registrar Asistencia</button>
-    </form>
-
-    <div class="mt-6">
+    <div class="card mb-4">
       <h2 class="text-lg font-semibold text-gray-800 mb-2">Registros actuales</h2>
-      <table class="w-full text-sm text-left text-gray-700 border" id="records-table">
-        <thead class="bg-red-100">
+      <table id="records-table">
+        <thead>
           <tr>
-            <th class="p-2 border">Nombre</th>
-            <th class="p-2 border">Tipo</th>
-            <th class="p-2 border">Fecha y Hora</th>
+            <th>Nombre</th>
+            <th>Tipo</th>
+            <th>Fecha y Hora</th>
           </tr>
         </thead>
         <tbody></tbody>
       </table>
     </div>
 
-    <button id="export-btn" class="mt-4 w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded">Exportar a CSV</button>
-  </main>
+    <button id="export-btn" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded">Exportar a CSV</button>
+  </div>
 
   <script>
     const form = document.getElementById('attendance-form');
@@ -64,21 +85,25 @@
       const tipo = document.getElementById('select-tipo').value;
       const fechaHora = new Date().toLocaleString();
 
-      if (!nombre || !tipo) return;
+      if (!nombre || !tipo) {
+        alert("Completa nombre y tipo");
+        return;
+      }
 
       const registro = { nombre, tipo, fechaHora };
       registros.push(registro);
       agregarFilaTabla(registro);
 
       form.reset();
+      document.getElementById('input-nombre').focus();
     });
 
     function agregarFilaTabla(registro) {
       const fila = document.createElement('tr');
       fila.innerHTML = `
-        <td class="p-2 border">${registro.nombre}</td>
-        <td class="p-2 border">${registro.tipo}</td>
-        <td class="p-2 border">${registro.fechaHora}</td>
+        <td>${registro.nombre}</td>
+        <td>${registro.tipo}</td>
+        <td>${registro.fechaHora}</td>
       `;
       tableBody.appendChild(fila);
     }
@@ -88,24 +113,23 @@
         alert("No hay registros para exportar.");
         return;
       }
-
-      const encabezados = ["Nombre", "Tipo", "Fecha y Hora"];
-      const filas = registros.map(reg => [reg.nombre, reg.tipo, reg.fechaHora]);
+      const encabezados = ["Nombre", "Tipo", "FechaHora"];
+      const filas = registros.map(r => [r.nombre, r.tipo, r.fechaHora]);
       const contenidoCSV = [encabezados, ...filas]
-        .map(fila => fila.map(valor => `"${valor}"`).join(','))
+        .map(fila => fila.map(item => `"${item}"`).join(','))
         .join('\n');
 
       const blob = new Blob([contenidoCSV], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
+      const link = document.createElement('a');
       link.href = url;
-      link.setAttribute("download", "asistencia_LPA.csv");
+      link.setAttribute('download', 'asistencia_LPA.csv');
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     });
   </script>
-
 </body>
 </html>
 
